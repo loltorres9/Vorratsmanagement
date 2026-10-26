@@ -367,6 +367,21 @@ def shopping_list(conn, status="open"):
     ).fetchall()
 
 
+def create_product(conn, name, unit, location, pack_size=None):
+    """Legt ein Produkt an, falls es den Namen noch nicht gibt; liefert in jedem Fall die id."""
+    existing = find_product(conn, name)
+    if existing:
+        return existing["id"]
+    if unit not in ("g", "ml", "Stk", "Portion") or location not in LOCATION_ORDER:
+        raise ValueError("Einheit oder Lagerort ungültig.")
+    cur = conn.execute(
+        "INSERT INTO products(name, unit, location, pack_size) VALUES(?,?,?,?)",
+        (name.strip(), unit, location, pack_size),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
 def find_product(conn, name):
     return conn.execute("SELECT * FROM products WHERE name = ? COLLATE NOCASE", (name.strip(),)).fetchone()
 

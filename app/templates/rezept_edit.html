@@ -32,6 +32,20 @@
     </select>
     <input name="new_qty" type="number" min="0" step="any" class="portions" aria-label="Menge">
   </div>
+  <details class="newprod">
+    <summary>Zutat gibt es noch nicht?</summary>
+    <div class="stack">
+      <label>Name <input name="new_name" placeholder="z. B. Lauch"></label>
+      <label>Einheit
+        <select name="new_unit"><option>g</option><option>ml</option><option>Stk</option><option>Portion</option></select>
+      </label>
+      <label>Lagerort
+        <select name="new_location"><option>Vorrat</option><option>Kühlschrank</option><option>TK</option></select>
+      </label>
+      <label>Packungsgröße <input name="new_pack_size" inputmode="decimal" placeholder="z. B. 500"></label>
+      <p class="sub">Menge oben bei „Zutat hinzufügen“ eintragen, dann speichern.</p>
+    </div>
+  </details>
   <div class="row">
     <button>Speichern</button>
     <a class="button" href="{{ url_for('recipes') }}">Abbrechen</a>

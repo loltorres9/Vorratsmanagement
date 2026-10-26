@@ -58,13 +58,6 @@
       "pack_size": 200
     },
     {
-      "name": "Trockenhefe",
-      "unit": "Stk",
-      "location": "Vorrat",
-      "category": "Backen",
-      "pack_size": 3
-    },
-    {
       "name": "Brötchen (altbacken)",
       "unit": "Stk",
       "location": "Vorrat",
@@ -274,22 +267,6 @@
       "keep": [
         "Apfelmus",
         "Puderzucker"
-      ]
-    },
-    {
-      "match": "Dampfnudeln mit Vanillesoße",
-      "servings": 5,
-      "notes": "Aus dem Rezeptordner, für 5 Portionen (ca. 10 Dampfnudeln) gerechnet. Hefeteig, 30 min gehen lassen, Stücke abstechen, in Milch, Zucker und Butter gut 25 min dämpfen, Deckel nicht öffnen.",
-      "ingredients": {
-        "Mehl": 500,
-        "Trockenhefe": 1,
-        "Zucker": 75,
-        "Milch": 375,
-        "Butter": 80,
-        "Eier": 1
-      },
-      "keep": [
-        "Vanillesoße"
       ]
     },
     {

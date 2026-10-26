@@ -42,6 +42,7 @@ def create_app(test_config=None):
             app.logger.info("Startdaten geladen")
         if seed.apply_recipe_import(conn):
             app.logger.info("Rezepte aus dem Rezeptordner übernommen")
+        seed.apply_dampfnudeln_fix(conn)
         logic.ensure_plan(conn)
         conn.close()
 
@@ -333,8 +334,16 @@ def create_app(test_config=None):
                     if request.form.get(f"del_{i['id']}"):
                         continue
                     ings[i["id"]] = float((request.form.get(f"qty_{i['id']}") or "0").replace(",", "."))
+                new_name = (request.form.get("new_name") or "").strip()
                 new_pid = request.form.get("new_product")
-                if new_pid:
+                if new_name or new_pid:
+                    if new_name:
+                        pack = request.form.get("new_pack_size")
+                        new_pid = logic.create_product(
+                            conn, new_name, request.form.get("new_unit", "g"),
+                            request.form.get("new_location", "Vorrat"),
+                            float(pack.replace(",", ".")) if pack else None,
+                        )
                     ings[int(new_pid)] = float((request.form.get("new_qty") or "0").replace(",", "."))
                 yq = request.form.get("yields_qty")
                 sv = request.form.get("servings")
