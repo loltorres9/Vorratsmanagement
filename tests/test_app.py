@@ -97,6 +97,25 @@ class RecipeEditTest(unittest.TestCase):
         self.assertIn("active", {r["name"] for r in conn.execute("PRAGMA table_info(recipes)")})
 
 
+class RecipeImportTest(unittest.TestCase):
+    def test_import_applies_once(self):
+        conn = fresh_conn()
+        self.assertTrue(seed.apply_recipe_import(conn))
+        self.assertFalse(seed.apply_recipe_import(conn))
+        lasagne = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
+        ings = {i["name"]: i["qty"] for i in logic.ingredients(conn, lasagne)}
+        self.assertEqual(ings["Hackfleisch"], 125)
+        self.assertEqual(ings["Lasagneplatten"], 50)
+        self.assertIn("Salat", ings)
+        self.assertNotIn("Passierte Tomaten", ings)
+        self.assertIsNotNone(conn.execute("SELECT 1 FROM recipes WHERE name='Spaghetti Bolognese'").fetchone())
+        self.assertIsNotNone(conn.execute("SELECT 1 FROM recipes WHERE name LIKE 'Spaghetti Carbonara%'").fetchone())
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM rotation").fetchone()[0], 35)
+        # alle Rotationsgerichte haben weiterhin Zutaten
+        for r in conn.execute("SELECT id FROM recipes"):
+            self.assertTrue(logic.ingredients(conn, r["id"]))
+
+
 class NeedsTest(unittest.TestCase):
     def test_week_needs_and_batch_expansion(self):
         conn = fresh_conn()
