@@ -79,6 +79,19 @@ def data_dir() -> Path:
     return p
 
 
+def storage_is_persistent() -> bool:
+    """False, wenn die App auf Railway läuft, aber DATA_DIR kein eingehängtes Volume ist.
+
+    Dann liegt die Datenbank im Container und ist nach jedem Deploy wieder leer."""
+    if not (os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RAILWAY_ENVIRONMENT_NAME")
+            or os.environ.get("RAILWAY_SERVICE_ID")):
+        return True
+    mount = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+    if mount:
+        return os.path.realpath(mount) == os.path.realpath(data_dir())
+    return os.path.ismount(data_dir())
+
+
 def db_path() -> Path:
     return Path(os.environ.get("DATABASE_PATH", data_dir() / "vorrat.db"))
 

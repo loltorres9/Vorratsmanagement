@@ -197,6 +197,24 @@ class StartupKeepsDataTest(unittest.TestCase):
         self.assertEqual(conn.execute("SELECT notes FROM recipes WHERE id=?", (rid,)).fetchone()[0], "meine Notiz")
 
 
+class StorageWarningTest(unittest.TestCase):
+    def test_warns_on_railway_without_volume(self):
+        import unittest.mock as mock
+        with mock.patch.dict(os.environ, {"DATA_DIR": tempfile.mkdtemp(), "RAILWAY_ENVIRONMENT": "production"}, clear=False):
+            os.environ.pop("RAILWAY_VOLUME_MOUNT_PATH", None)
+            self.assertFalse(db.storage_is_persistent())
+            tmp = os.environ["DATA_DIR"]
+            with mock.patch.dict(os.environ, {"RAILWAY_VOLUME_MOUNT_PATH": tmp}):
+                self.assertTrue(db.storage_is_persistent())
+
+    def test_no_warning_locally(self):
+        import unittest.mock as mock
+        with mock.patch.dict(os.environ, {}, clear=False):
+            for k in ("RAILWAY_ENVIRONMENT", "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_SERVICE_ID"):
+                os.environ.pop(k, None)
+            self.assertTrue(db.storage_is_persistent())
+
+
 class NewIngredientTest(unittest.TestCase):
     def test_create_product_is_idempotent_and_validates(self):
         conn = fresh_conn()
