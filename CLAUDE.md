@@ -35,7 +35,7 @@ tests/test_app.py   unittest (läuft auch mit pytest)
 ## Datenmodell (Kurzfassung)
 - `products`: name, unit (g/ml/Stk/Portion), location (Vorrat/Kühlschrank/TK), category,
   min_stock, pack_size, price, **stock**, made_by_recipe_id (selbstgemacht, z. B. Gulasch-Portion)
-- `recipes` (kind `meal` | `batch`), `recipe_ingredients` (Menge **pro Portion** bzw. pro Batch)
+- `recipes` (kind `meal` | `batch`, `active` 0/1 – inaktive Gerichte sind nicht in der Rotation), `recipe_ingredients` (Menge **pro Portion** bzw. pro Batch)
 - `rotation(week, weekday, recipe_id)` – 5-Wochen-Rotation, Woche 1 beginnt bei `rotation_start`
 - `meal_plan(date, recipe_id, portions, status planned|cooked|skipped)`
 - `shopping_items(source auto|manual|keep, status open|bought|dismissed, keep_item_id, packs)`
@@ -80,7 +80,8 @@ Lokale DB zurücksetzen: `rm -rf data/` (wird beim Start neu aus seed.json befü
 
 ## Roadmap (nächste Schritte, in dieser Reihenfolge)
 1. **Migrationen**: einfache `schema_version` in settings + Migrationsliste in db.py.
-2. **Rezepte & Produkte in der UI bearbeiten** (aktuell nur über seed.json bzw. Anlegen von Produkten).
+2. **Rezepte & Produkte in der UI bearbeiten**: Rezepte (Name, Notiz, Zutaten, aktiv/inaktiv) erledigt;
+   offen: Rezepte neu anlegen/löschen, Produkte bearbeiten.
 3. **Backup**: nächtlicher `sqlite3 .backup`-Dump (z. B. nach S3/R2 oder per Endpoint
    `/export` als Download, geschützt durch Login). Danach Import-Funktion.
 4. **Barcode-Scan** im Browser (BarcodeDetector API bzw. Fallback-Bibliothek) +

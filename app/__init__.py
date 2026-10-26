@@ -137,7 +137,11 @@ def create_app(test_config=None):
     def plan_view():
         conn = get_conn()
         logic.ensure_plan(conn, days=21)
-        recipes = conn.execute("SELECT id, name FROM recipes WHERE kind='meal' ORDER BY name").fetchall()
+        recipes = conn.execute(
+            "SELECT id, name FROM recipes WHERE kind='meal' AND (active = 1 OR id IN "
+            "(SELECT recipe_id FROM meal_plan WHERE date >= ?)) ORDER BY name",
+            (logic.today().isoformat(),),
+        ).fetchall()
         _, week = logic.rotation_recipe(conn, logic.today())
         return render_template("plan.html", days=logic.plan(conn, days=21), recipes=recipes, week=week)
 
@@ -286,7 +290,7 @@ def create_app(test_config=None):
     @login_required
     def recipes():
         conn = get_conn()
-        rs = conn.execute("SELECT * FROM recipes ORDER BY kind DESC, name").fetchall()
+        rs = conn.execute("SELECT * FROM recipes ORDER BY active DESC, kind DESC, name").fetchall()
         return render_template(
             "rezepte.html", recipes=[(r, logic.ingredients(conn, r["id"])) for r in rs]
         )
@@ -297,5 +301,44 @@ def create_app(test_config=None):
         logic.cook_recipe(get_conn(), rid, float(request.form.get("portions") or 1))
         flash("Gekocht und gebucht.")
         return redirect(url_for("recipes"))
+
+    @app.post("/rezepte/<int:rid>/active")
+    @login_required
+    def recipe_active(rid):
+        active = request.form.get("active") == "1"
+        logic.set_recipe_active(get_conn(), rid, active)
+        flash("Rezept ist wieder in der Rotation." if active else "Rezept ist inaktiv und aus dem Plan genommen.")
+        return redirect(url_for("recipes"))
+
+    @app.route("/rezepte/<int:rid>/edit", methods=["GET", "POST"])
+    @login_required
+    def recipe_edit(rid):
+        conn = get_conn()
+        r = conn.execute("SELECT * FROM recipes WHERE id = ?", (rid,)).fetchone()
+        if not r:
+            return redirect(url_for("recipes"))
+        if request.method == "POST":
+            ings = {}
+            try:
+                for i in logic.ingredients(conn, rid):
+                    if request.form.get(f"del_{i['id']}"):
+                        continue
+                    ings[i["id"]] = float((request.form.get(f"qty_{i['id']}") or "0").replace(",", "."))
+                new_pid = request.form.get("new_product")
+                if new_pid:
+                    ings[int(new_pid)] = float((request.form.get("new_qty") or "0").replace(",", "."))
+                yq = request.form.get("yields_qty")
+                logic.update_recipe(
+                    conn, rid, request.form.get("name"), request.form.get("notes"), ings,
+                    float(yq.replace(",", ".")) if yq else None,
+                )
+                flash("Rezept gespeichert.")
+                return redirect(url_for("recipes"))
+            except ValueError as e:
+                flash(str(e))
+        products = conn.execute(
+            "SELECT id, name, unit FROM products WHERE active = 1 ORDER BY name"
+        ).fetchall()
+        return render_template("rezept_edit.html", r=r, ings=logic.ingredients(conn, rid), products=products)
 
     return app

@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS recipes (
     kind              TEXT NOT NULL DEFAULT 'meal',  -- meal | batch
     yields_product_id INTEGER REFERENCES products(id),
     yields_qty        REAL,
-    notes             TEXT NOT NULL DEFAULT ''
+    notes             TEXT NOT NULL DEFAULT '',
+    active            INTEGER NOT NULL DEFAULT 1   -- 0 = nicht mehr in der Rotation
 );
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
     recipe_id  INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
@@ -90,7 +91,15 @@ def connect(path=None) -> sqlite3.Connection:
 
 def init(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    migrate(conn)
     conn.commit()
+
+
+def migrate(conn: sqlite3.Connection) -> None:
+    """Spalten nachrüsten, die in älteren (bereits befüllten) Datenbanken fehlen."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(recipes)")}
+    if "active" not in cols:
+        conn.execute("ALTER TABLE recipes ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
 
 
 def get_setting(conn, key, default=None):

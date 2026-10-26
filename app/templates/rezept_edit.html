@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ r.name }} bearbeiten – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Rezept bearbeiten</h1>
+  <p class="sub">Mengen pro Portion{% if r.kind == 'batch' %} (Vorkoch-Rezept: pro Batch){% endif %}.</p>
+</header>
+<form method="post" class="stack">
+  <label>Name <input name="name" value="{{ r.name }}" required></label>
+  <label>Notiz <input name="notes" value="{{ r.notes }}"></label>
+  {% if r.kind == 'batch' %}
+  <label>Ergibt (Portionen pro Batch) <input name="yields_qty" type="number" min="0.5" step="0.5" value="{{ r.yields_qty }}"></label>
+  {% endif %}
+  <ul class="ings">
+    {% for i in ings %}
+    <li>
+      <span>{{ i.name }} ({{ i.unit }})</span>
+      <span>
+        <input name="qty_{{ i.id }}" type="number" min="0" step="any" value="{{ i.qty }}" class="portions" aria-label="Menge {{ i.name }}">
+        <label><input type="checkbox" name="del_{{ i.id }}"> entfernen</label>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="addrow">
+    <select name="new_product" aria-label="Zutat hinzufügen">
+      <option value="">Zutat hinzufügen …</option>
+      {% for p in products %}<option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>{% endfor %}
+    </select>
+    <input name="new_qty" type="number" min="0" step="any" class="portions" aria-label="Menge">
+  </div>
+  <div class="row">
+    <button>Speichern</button>
+    <a class="button" href="{{ url_for('recipes') }}">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}

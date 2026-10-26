@@ -4,6 +4,7 @@ Alle Funktionen bekommen eine sqlite3-Connection und committen selbst.
 """
 import math
 import os
+import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
@@ -96,7 +97,9 @@ def rotation_recipe(conn, d: date):
     weeks = int(db.get_setting(conn, "rotation_weeks", 5))
     week = ((d - rotation_start(conn)).days // 7) % weeks + 1
     row = conn.execute(
-        "SELECT recipe_id FROM rotation WHERE week = ? AND weekday = ?", (week, d.weekday())
+        "SELECT ro.recipe_id FROM rotation ro JOIN recipes r ON r.id = ro.recipe_id "
+        "WHERE ro.week = ? AND ro.weekday = ? AND r.active = 1",
+        (week, d.weekday()),
     ).fetchone()
     return (row["recipe_id"] if row else None), week
 
@@ -140,6 +143,42 @@ def ingredients(conn, recipe_id):
         "WHERE ri.recipe_id = ? ORDER BY p.location, p.name",
         (recipe_id,),
     ).fetchall()
+
+
+def set_recipe_active(conn, recipe_id, active: bool):
+    """Inaktive Gerichte verschwinden aus der Rotation und aus dem noch ungekochten Plan."""
+    conn.execute("UPDATE recipes SET active = ? WHERE id = ?", (1 if active else 0, recipe_id))
+    if not active:
+        conn.execute(
+            "DELETE FROM meal_plan WHERE recipe_id = ? AND status = 'planned' AND date >= ?",
+            (recipe_id, today().isoformat()),
+        )
+    conn.commit()
+
+
+def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None):
+    """Name, Notiz und Zutaten (product_id -> Menge) ersetzen. Wirft ValueError bei ungültigen Angaben."""
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Der Name fehlt.")
+    if not ingredients:
+        raise ValueError("Ein Rezept braucht mindestens eine Zutat.")
+    if any(q <= 0 for q in ingredients.values()):
+        raise ValueError("Mengen müssen größer als 0 sein.")
+    try:
+        conn.execute(
+            "UPDATE recipes SET name = ?, notes = ?, yields_qty = COALESCE(?, yields_qty) WHERE id = ?",
+            (name, (notes or "").strip(), yields_qty, recipe_id),
+        )
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise ValueError(f"Ein Rezept „{name}“ gibt es schon.")
+    conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe_id,))
+    conn.executemany(
+        "INSERT INTO recipe_ingredients(recipe_id, product_id, qty) VALUES(?,?,?)",
+        [(recipe_id, pid, q) for pid, q in ingredients.items()],
+    )
+    conn.commit()
 
 
 def cook_recipe(conn, recipe_id, portions=1.0, reason=None):
