@@ -17,9 +17,11 @@ from . import db
 
 EPS = 1e-9
 LOCATION_ORDER = {"Vorrat": 0, "Kühlschrank": 1, "TK": 2}
-# Grobe Gewichte für das Tiefkühlfach (Einheit „Portion“ bzw. „Stk“ in Gramm).
-PORTION_G = 400
-PIECE_G = 100
+UNITS = ("g", "ml", "Stk", "Portion", "Tasse", "EL", "TL", "Packung")
+LOCATIONS = tuple(LOCATION_ORDER)
+
+# Grobe Gewichte für das Tiefkühlfach (g pro Einheit; g und ml zählen 1:1).
+UNIT_G = {"Portion": 400, "Stk": 100, "Packung": 400, "Tasse": 200, "EL": 15, "TL": 5}
 
 
 # --------------------------------------------------------------------------- Zeit
@@ -233,7 +235,7 @@ def requirements(conn, start: date, days: int):
 
 def _weight_g(unit, qty):
     """Grobes Gewicht für die Tiefkühlfach-Rechnung."""
-    return qty * PORTION_G if unit == "Portion" else qty * PIECE_G if unit == "Stk" else qty
+    return qty * UNIT_G.get(unit, 1)
 
 
 def compute_needs(conn, start: date | None = None, days: int | None = None,
@@ -372,7 +374,7 @@ def create_product(conn, name, unit, location, pack_size=None):
     existing = find_product(conn, name)
     if existing:
         return existing["id"]
-    if unit not in ("g", "ml", "Stk", "Portion") or location not in LOCATION_ORDER:
+    if unit not in UNITS or location not in LOCATION_ORDER:
         raise ValueError("Einheit oder Lagerort ungültig.")
     cur = conn.execute(
         "INSERT INTO products(name, unit, location, pack_size) VALUES(?,?,?,?)",
@@ -380,6 +382,48 @@ def create_product(conn, name, unit, location, pack_size=None):
     )
     conn.commit()
     return cur.lastrowid
+
+
+def update_product(conn, product_id, name, unit, location, category="", min_stock=0.0,
+                   pack_size=None, price=None, active=True, factor=None):
+    """Zutat ändern. Wechselt die Einheit, rechnen `factor` (1 neue Einheit = factor alte Einheiten)
+    Bestand, Mindestbestand, Packungsgröße, Rezeptmengen und offene Einkaufsmengen mit um.
+
+    Ohne `factor` bleiben die Zahlen, wie sie sind. Wirft ValueError bei ungültigen Angaben."""
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Der Name fehlt.")
+    if unit not in UNITS or location not in LOCATION_ORDER:
+        raise ValueError("Einheit oder Lagerort ungültig.")
+    if factor is not None and factor <= 0:
+        raise ValueError("Der Umrechnungsfaktor muss größer als 0 sein.")
+    old = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    if not old:
+        raise ValueError("Zutat nicht gefunden.")
+    conv = factor if (factor and unit != old["unit"]) else None
+
+    def c(x):
+        return None if x is None else (x / conv if conv else x)
+
+    try:
+        conn.execute(
+            "UPDATE products SET name = ?, unit = ?, location = ?, category = ?, min_stock = ?, "
+            "pack_size = ?, price = ?, stock = ?, active = ? WHERE id = ?",
+            (name, unit, location, (category or "").strip(), c(min_stock or 0.0), c(pack_size), price,
+             c(old["stock"]), 1 if active else 0, product_id),
+        )
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise ValueError(f"Eine Zutat „{name}“ gibt es schon.")
+    if conv:
+        conn.execute("UPDATE recipe_ingredients SET qty = qty / ? WHERE product_id = ?", (conv, product_id))
+        conn.execute(
+            "UPDATE shopping_items SET qty = qty / ?, unit = ? WHERE product_id = ? AND status = 'open'",
+            (conv, unit, product_id),
+        )
+    elif unit != old["unit"]:
+        conn.execute("UPDATE shopping_items SET unit = ? WHERE product_id = ? AND status = 'open'", (unit, product_id))
+    conn.commit()
 
 
 def find_product(conn, name):

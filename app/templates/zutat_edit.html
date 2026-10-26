@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} bearbeiten – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Zutat bearbeiten</h1>
+  {% if used %}<p class="sub">Verwendet in: {{ used|join(", ") }}</p>{% endif %}
+</header>
+<form method="post" class="stack">
+  <label>Name <input name="name" value="{{ p.name }}" required></label>
+  <label>Einheit
+    <select name="unit">
+      {% for u in units %}<option {% if u == p.unit %}selected{% endif %}>{{ u }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Umrechnung bei neuer Einheit
+    <input name="factor" inputmode="decimal" placeholder="1 neue Einheit = wie viele {{ p.unit }}? z. B. 200">
+  </label>
+  <p class="sub">Nur ausfüllen, wenn du die Einheit wechselst: Dann rechnet die App Bestand, Packungsgröße und Rezeptmengen um (1 Tasse Reis = 200 g → 200). Leer lassen, wenn die Zahlen so bleiben sollen.</p>
+  <label>Lagerort
+    <select name="location">
+      {% for l in locations %}<option {% if l == p.location %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Kategorie <input name="category" value="{{ p.category }}"></label>
+  <label>Mindestbestand <input name="min_stock" inputmode="decimal" value="{{ num(p.min_stock) }}"></label>
+  <label>Packungsgröße <input name="pack_size" inputmode="decimal" value="{{ num(p.pack_size) if p.pack_size else '' }}"></label>
+  <label>Preis pro Packung (€) <input name="price" inputmode="decimal" value="{{ p.price if p.price is not none else '' }}"></label>
+  <label>Status
+    <select name="active">
+      <option value="1" {% if p.active %}selected{% endif %}>Aktiv</option>
+      <option value="0" {% if not p.active %}selected{% endif %}>Ausgeblendet</option>
+    </select>
+  </label>
+  <div class="row">
+    <button>Speichern</button>
+    <a class="button" href="{{ url_for('ingredients_view') }}">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}

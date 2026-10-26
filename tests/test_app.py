@@ -145,6 +145,39 @@ class UserEditsProtectedTest(unittest.TestCase):
         self.assertEqual([i["qty"] for i in logic.ingredients(conn, rid)], [3])
 
 
+class ProductEditTest(unittest.TestCase):
+    def test_unit_change_converts_quantities(self):
+        conn = fresh_conn()
+        reis = pid(conn, "Reis")
+        logic.set_stock(conn, reis, 1000)
+        rid = conn.execute("SELECT recipe_id FROM recipe_ingredients WHERE product_id=? LIMIT 1", (reis,)).fetchone()
+        before = conn.execute("SELECT qty FROM recipe_ingredients WHERE product_id=? AND recipe_id=?",
+                              (reis, rid[0])).fetchone()[0]
+        logic.update_product(conn, reis, "Reis", "Tasse", "Vorrat", "", 0, 1000, None, True, factor=200)
+        row = conn.execute("SELECT * FROM products WHERE id=?", (reis,)).fetchone()
+        self.assertEqual((row["unit"], row["stock"], row["pack_size"]), ("Tasse", 5, 5))
+        after = conn.execute("SELECT qty FROM recipe_ingredients WHERE product_id=? AND recipe_id=?",
+                             (reis, rid[0])).fetchone()[0]
+        self.assertAlmostEqual(after, before / 200)
+
+    def test_unit_change_without_factor_keeps_numbers(self):
+        conn = fresh_conn()
+        reis = pid(conn, "Reis")
+        logic.set_stock(conn, reis, 3)
+        logic.update_product(conn, reis, "Reis", "Tasse", "Vorrat", "", 0, 1000)
+        self.assertEqual(stock(conn, "Reis"), 3)
+
+    def test_validation(self):
+        conn = fresh_conn()
+        reis = pid(conn, "Reis")
+        with self.assertRaises(ValueError):
+            logic.update_product(conn, reis, "", "g", "Vorrat")
+        with self.assertRaises(ValueError):
+            logic.update_product(conn, reis, "Reis", "Liter", "Vorrat")
+        with self.assertRaises(ValueError):
+            logic.update_product(conn, reis, "Mehl", "g", "Vorrat")  # Name schon vergeben
+
+
 class NewIngredientTest(unittest.TestCase):
     def test_create_product_is_idempotent_and_validates(self):
         conn = fresh_conn()
@@ -395,6 +428,19 @@ class WebTest(unittest.TestCase):
         self.assertIn("Kaffee", self.c.get("/einkauf").get_data(as_text=True))
         t = logic.today().isoformat()
         self.assertEqual(self.c.post(f"/plan/{t}/cook").status_code, 302)
+
+    def test_ingredients_tab(self):
+        self.login()
+        self.assertEqual(self.c.get("/zutaten").status_code, 200)
+        conn = db.connect(self.app.config["DATABASE_PATH"])
+        reis = pid(conn, "Reis")
+        self.assertEqual(self.c.get(f"/zutaten/{reis}").status_code, 200)
+        r = self.c.post(f"/zutaten/{reis}", data={
+            "name": "Reis", "unit": "Tasse", "location": "Vorrat", "category": "", "min_stock": "0",
+            "pack_size": "5", "price": "", "active": "1", "factor": "200"})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn("Tasse", self.c.get("/zutaten").get_data(as_text=True))
+        self.assertEqual(self.c.get("/rezepte").status_code, 200)
 
     def test_recipe_edit_creates_new_ingredient(self):
         self.login()

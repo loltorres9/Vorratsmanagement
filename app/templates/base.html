@@ -31,6 +31,7 @@
     <a href="{{ url_for('shopping') }}" {% if nav == 'shopping' %}aria-current="page"{% endif %}>Einkauf</a>
     <a href="{{ url_for('stock') }}" {% if nav == 'stock' %}aria-current="page"{% endif %}>Vorrat</a>
     <a href="{{ url_for('recipes') }}" {% if nav == 'recipes' %}aria-current="page"{% endif %}>Rezepte</a>
+    <a href="{{ url_for('ingredients_view') }}" {% if nav in ('ingredients_view', 'ingredient_edit') %}aria-current="page"{% endif %}>Zutaten</a>
   </nav>
   {% endif %}
 <script>

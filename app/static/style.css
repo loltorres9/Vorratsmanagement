@@ -149,7 +149,7 @@ input, select {
   background: var(--surface); border-top: 1px solid var(--line);
   padding: .3rem .3rem calc(env(safe-area-inset-bottom, 0px) + .3rem);
 }
-.tabs a { flex: 1; text-align: center; padding: .7rem .2rem; color: var(--muted); text-decoration: none; font-size: .95rem; border-radius: var(--radius); }
+.tabs a { flex: 1; text-align: center; padding: .7rem .2rem; color: var(--muted); text-decoration: none; font-size: .88rem; border-radius: var(--radius); }
 .tabs a[aria-current="page"] { color: var(--rim); font-weight: 700; background: var(--rim-soft); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

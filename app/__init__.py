@@ -86,6 +86,8 @@ def create_app(test_config=None):
         return {
             "fmt_qty": logic.fmt_qty,
             "num": num,
+            "units": logic.UNITS,
+            "locations": logic.LOCATIONS,
             "day_label": day_label,
             "keep_enabled": keep_sync.enabled(),
             "nav": request.endpoint,
@@ -276,6 +278,49 @@ def create_app(test_config=None):
     def stock_adjust(pid):
         logic.change_stock(get_conn(), pid, float(request.form["delta"]), "Manuell")
         return redirect(url_for("stock") + f"#p{pid}")
+
+    @app.get("/zutaten")
+    @login_required
+    def ingredients_view():
+        conn = get_conn()
+        rows = conn.execute(
+            "SELECT * FROM products ORDER BY active DESC, "
+            "CASE location WHEN 'Vorrat' THEN 0 WHEN 'Kühlschrank' THEN 1 WHEN 'TK' THEN 2 ELSE 3 END, "
+            "category, name"
+        ).fetchall()
+        groups = {}
+        for p in rows:
+            groups.setdefault("Ausgeblendet" if not p["active"] else p["location"], []).append(p)
+        return render_template("zutaten.html", groups=groups)
+
+    @app.route("/zutaten/<int:pid>", methods=["GET", "POST"])
+    @login_required
+    def ingredient_edit(pid):
+        conn = get_conn()
+        p = conn.execute("SELECT * FROM products WHERE id = ?", (pid,)).fetchone()
+        if not p:
+            return redirect(url_for("ingredients_view"))
+        if request.method == "POST":
+            f = request.form
+
+            def num_or_none(key):
+                v = (f.get(key) or "").replace(",", ".").strip()
+                return float(v) if v else None
+
+            try:
+                logic.update_product(
+                    conn, pid, f.get("name"), f.get("unit"), f.get("location"), f.get("category", ""),
+                    num_or_none("min_stock") or 0.0, num_or_none("pack_size"), num_or_none("price"),
+                    active=f.get("active") == "1", factor=num_or_none("factor"),
+                )
+                flash("Zutat gespeichert.")
+                return redirect(url_for("ingredients_view"))
+            except ValueError as e:
+                flash(str(e))
+        used = conn.execute(
+            "SELECT r.name FROM recipe_ingredients ri JOIN recipes r ON r.id = ri.recipe_id "
+            "WHERE ri.product_id = ? ORDER BY r.name", (pid,)).fetchall()
+        return render_template("zutat_edit.html", p=p, used=[r["name"] for r in used])
 
     @app.post("/vorrat/neu")
     @login_required
