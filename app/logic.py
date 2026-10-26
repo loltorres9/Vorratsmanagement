@@ -140,7 +140,8 @@ def set_plan(conn, d: str, recipe_id: int, portions: float = 1):
 
 def ingredients(conn, recipe_id):
     return conn.execute(
-        "SELECT ri.qty, p.* FROM recipe_ingredients ri JOIN products p ON p.id = ri.product_id "
+        "SELECT ri.qty, ri.qty / r.servings AS per_portion, p.* FROM recipe_ingredients ri "
+        "JOIN products p ON p.id = ri.product_id JOIN recipes r ON r.id = ri.recipe_id "
         "WHERE ri.recipe_id = ? ORDER BY p.location, p.name",
         (recipe_id,),
     ).fetchall()
@@ -157,8 +158,10 @@ def set_recipe_active(conn, recipe_id, active: bool):
     conn.commit()
 
 
-def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None):
-    """Name, Notiz und Zutaten (product_id -> Menge) ersetzen. Wirft ValueError bei ungültigen Angaben."""
+def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None, servings=None):
+    """Name, Notiz, Portionen und Zutaten (product_id -> Menge laut Rezept) ersetzen.
+
+    Wirft ValueError bei ungültigen Angaben."""
     name = (name or "").strip()
     if not name:
         raise ValueError("Der Name fehlt.")
@@ -166,10 +169,13 @@ def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None):
         raise ValueError("Ein Rezept braucht mindestens eine Zutat.")
     if any(q <= 0 for q in ingredients.values()):
         raise ValueError("Mengen müssen größer als 0 sein.")
+    if servings is not None and servings <= 0:
+        raise ValueError("Die Portionen müssen größer als 0 sein.")
     try:
         conn.execute(
-            "UPDATE recipes SET name = ?, notes = ?, yields_qty = COALESCE(?, yields_qty) WHERE id = ?",
-            (name, (notes or "").strip(), yields_qty, recipe_id),
+            "UPDATE recipes SET name = ?, notes = ?, yields_qty = COALESCE(?, yields_qty), "
+            "servings = COALESCE(?, servings) WHERE id = ?",
+            (name, (notes or "").strip(), yields_qty, servings, recipe_id),
         )
     except sqlite3.IntegrityError:
         conn.rollback()
@@ -187,7 +193,7 @@ def cook_recipe(conn, recipe_id, portions=1.0, reason=None):
     r = conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
     reason = reason or f"Gekocht: {r['name']}"
     for ing in ingredients(conn, recipe_id):
-        change_stock(conn, ing["id"], -ing["qty"] * portions, reason, commit=False)
+        change_stock(conn, ing["id"], -ing["per_portion"] * portions, reason, commit=False)
     if r["kind"] == "batch" and r["yields_product_id"]:
         change_stock(conn, r["yields_product_id"], (r["yields_qty"] or 1) * portions, reason, commit=False)
     conn.commit()
@@ -214,8 +220,9 @@ def requirements(conn, start: date, days: int):
     req = defaultdict(float)
     end = start + timedelta(days=days)
     rows = conn.execute(
-        "SELECT m.portions, ri.product_id, ri.qty FROM meal_plan m "
+        "SELECT m.portions, ri.product_id, ri.qty / r.servings AS qty FROM meal_plan m "
         "JOIN recipe_ingredients ri ON ri.recipe_id = m.recipe_id "
+        "JOIN recipes r ON r.id = m.recipe_id "
         "WHERE m.status = 'planned' AND m.date >= ? AND m.date < ?",
         (start.isoformat(), end.isoformat()),
     ).fetchall()
@@ -286,7 +293,7 @@ def _needs(conn, start, days, reserve_days, tk_days):
             r = conn.execute("SELECT * FROM recipes WHERE id = ?", (p["made_by_recipe_id"],)).fetchone()
             batches = math.ceil(deficit / (r["yields_qty"] or 1))
             for ing in ingredients(conn, r["id"]):
-                req[ing["id"]] += ing["qty"] * batches
+                req[ing["id"]] += ing["per_portion"] * batches
             hints.append(f"{r['name']}: {batches}× kochen")
 
     needs = []

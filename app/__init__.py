@@ -131,7 +131,7 @@ def create_app(test_config=None):
         days = logic.plan(conn, days=7)
         today_entry = days[0] if days and days[0]["date"] == logic.today().isoformat() else None
         today_ings = logic.ingredients(conn, today_entry["recipe_id"]) if today_entry else []
-        missing = [i for i in today_ings if i["stock"] + 1e-9 < i["qty"] * today_entry["portions"]] if today_entry else []
+        missing = [i for i in today_ings if i["stock"] + 1e-9 < i["per_portion"] * today_entry["portions"]] if today_entry else []
         open_count = conn.execute("SELECT COUNT(*) FROM shopping_items WHERE status='open'").fetchone()[0]
         return render_template(
             "index.html", today=today_entry, ings=today_ings, missing=missing,
@@ -337,9 +337,11 @@ def create_app(test_config=None):
                 if new_pid:
                     ings[int(new_pid)] = float((request.form.get("new_qty") or "0").replace(",", "."))
                 yq = request.form.get("yields_qty")
+                sv = request.form.get("servings")
                 logic.update_recipe(
                     conn, rid, request.form.get("name"), request.form.get("notes"), ings,
                     float(yq.replace(",", ".")) if yq else None,
+                    float(sv.replace(",", ".")) if sv else None,
                 )
                 flash("Rezept gespeichert.")
                 return redirect(url_for("recipes"))
