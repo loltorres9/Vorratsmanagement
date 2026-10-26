@@ -4,6 +4,7 @@ Alle Funktionen bekommen eine sqlite3-Connection und committen selbst.
 """
 import math
 import os
+import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
@@ -16,6 +17,9 @@ from . import db
 
 EPS = 1e-9
 LOCATION_ORDER = {"Vorrat": 0, "Kühlschrank": 1, "TK": 2}
+# Grobe Gewichte für das Tiefkühlfach (Einheit „Portion“ bzw. „Stk“ in Gramm).
+PORTION_G = 400
+PIECE_G = 100
 
 
 # --------------------------------------------------------------------------- Zeit
@@ -94,7 +98,9 @@ def rotation_recipe(conn, d: date):
     weeks = int(db.get_setting(conn, "rotation_weeks", 5))
     week = ((d - rotation_start(conn)).days // 7) % weeks + 1
     row = conn.execute(
-        "SELECT recipe_id FROM rotation WHERE week = ? AND weekday = ?", (week, d.weekday())
+        "SELECT ro.recipe_id FROM rotation ro JOIN recipes r ON r.id = ro.recipe_id "
+        "WHERE ro.week = ? AND ro.weekday = ? AND r.active = 1",
+        (week, d.weekday()),
     ).fetchone()
     return (row["recipe_id"] if row else None), week
 
@@ -140,6 +146,42 @@ def ingredients(conn, recipe_id):
     ).fetchall()
 
 
+def set_recipe_active(conn, recipe_id, active: bool):
+    """Inaktive Gerichte verschwinden aus der Rotation und aus dem noch ungekochten Plan."""
+    conn.execute("UPDATE recipes SET active = ? WHERE id = ?", (1 if active else 0, recipe_id))
+    if not active:
+        conn.execute(
+            "DELETE FROM meal_plan WHERE recipe_id = ? AND status = 'planned' AND date >= ?",
+            (recipe_id, today().isoformat()),
+        )
+    conn.commit()
+
+
+def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None):
+    """Name, Notiz und Zutaten (product_id -> Menge) ersetzen. Wirft ValueError bei ungültigen Angaben."""
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Der Name fehlt.")
+    if not ingredients:
+        raise ValueError("Ein Rezept braucht mindestens eine Zutat.")
+    if any(q <= 0 for q in ingredients.values()):
+        raise ValueError("Mengen müssen größer als 0 sein.")
+    try:
+        conn.execute(
+            "UPDATE recipes SET name = ?, notes = ?, yields_qty = COALESCE(?, yields_qty) WHERE id = ?",
+            (name, (notes or "").strip(), yields_qty, recipe_id),
+        )
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise ValueError(f"Ein Rezept „{name}“ gibt es schon.")
+    conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe_id,))
+    conn.executemany(
+        "INSERT INTO recipe_ingredients(recipe_id, product_id, qty) VALUES(?,?,?)",
+        [(recipe_id, pid, q) for pid, q in ingredients.items()],
+    )
+    conn.commit()
+
+
 def cook_recipe(conn, recipe_id, portions=1.0, reason=None):
     """Zieht Zutaten ab; Batch-Rezepte buchen das Ergebnis (z.B. 4 Gulasch-Portionen) ein."""
     r = conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
@@ -182,17 +224,58 @@ def requirements(conn, start: date, days: int):
     return req
 
 
-def compute_needs(conn, start: date | None = None, days: int | None = None):
+def _weight_g(unit, qty):
+    """Grobes Gewicht für die Tiefkühlfach-Rechnung."""
+    return qty * PORTION_G if unit == "Portion" else qty * PIECE_G if unit == "Stk" else qty
+
+
+def compute_needs(conn, start: date | None = None, days: int | None = None,
+                  reserve_days: int | None = None, tk_capacity_g: float | None = None):
     """Was muss gekauft werden? Liste von dicts, sortiert nach Laden-Reihenfolge.
 
     Bedarf = Zutaten der nächsten `days` Tage + Mindestbestand − Bestand.
+    Haltbare Produkte (Vorrat, TK) werden zusätzlich für `reserve_days` Tage
+    (Standard 10, Umgebungsvariable RESERVE_DAYS) vorgehalten, Frischware nicht.
+    Passt die TK-Reserve nicht ins Tiefkühlfach (`tk_capacity_g`, Standard 4000 g,
+    Umgebungsvariable TK_CAPACITY_G), wird ihr Zeitraum verkürzt, mindestens auf `days`.
     Selbstgemachte Produkte (made_by_recipe_id) werden in die Zutaten ihres
     Batch-Rezepts aufgelöst, statt selbst auf der Liste zu landen.
     """
     start = start or today()
     days = days or int(os.environ.get("PLAN_DAYS", 7))
+    reserve_days = int(os.environ.get("RESERVE_DAYS", 10)) if reserve_days is None else reserve_days
+    cap = float(os.environ.get("TK_CAPACITY_G", 4000)) if tk_capacity_g is None else tk_capacity_g
+    reserve_days = max(reserve_days, days)
+    for tk_days in range(reserve_days, days - 1, -1):
+        needs, hints = _needs(conn, start, days, reserve_days, tk_days)
+        tk_total = _tk_weight(conn, needs)
+        if cap <= 0 or tk_total <= cap or tk_days == days:
+            break
+    if tk_days < reserve_days:
+        msg = f"Tiefkühlfach voll: TK-Reserve nur für {tk_days} statt {reserve_days} Tage"
+        if tk_total > cap > 0:
+            msg += f" (auch das übersteigt {fmt_qty(cap, 'g')})"
+        hints.append(msg)
+    return needs, hints
+
+
+def _tk_weight(conn, needs):
+    """Gewicht im Tiefkühlfach, wenn alles Eingekaufte drin liegt."""
+    bought = {n["product_id"]: n["qty"] for n in needs}
+    total = 0.0
+    for p in conn.execute("SELECT * FROM products WHERE active = 1 AND location = 'TK'"):
+        total += _weight_g(p["unit"], p["stock"] + bought.get(p["id"], 0))
+    return total
+
+
+def _needs(conn, start, days, reserve_days, tk_days):
     products = {p["id"]: p for p in conn.execute("SELECT * FROM products WHERE active = 1")}
     req = requirements(conn, start, days)
+    for horizon, locations in ((reserve_days, ("Vorrat",)), (tk_days, ("TK",))):
+        if horizon > days:
+            for pid, qty in requirements(conn, start, horizon).items():
+                if products.get(pid) and products[pid]["location"] in locations:
+                    req[pid] = qty
     hints = []
 
     for p in list(products.values()):
@@ -225,13 +308,14 @@ def compute_needs(conn, start: date | None = None, days: int | None = None):
 
 # ----------------------------------------------------------------- Einkaufsliste
 
-def refresh_shopping_list(conn, start: date | None = None, days: int | None = None):
+def refresh_shopping_list(conn, start: date | None = None, days: int | None = None,
+                          reserve_days: int | None = None):
     """Gleicht die automatischen Einträge mit dem aktuellen Bedarf ab.
 
     Bestehende Einträge werden aktualisiert statt neu angelegt, damit die
     Verknüpfung zu Google Keep erhalten bleibt.
     """
-    needs, hints = compute_needs(conn, start, days)
+    needs, hints = compute_needs(conn, start, days, reserve_days)
     open_rows = conn.execute("SELECT * FROM shopping_items WHERE status = 'open'").fetchall()
     auto = {r["product_id"]: r for r in open_rows if r["source"] == "auto"}
     manual_pids = {r["product_id"] for r in open_rows if r["source"] != "auto" and r["product_id"]}

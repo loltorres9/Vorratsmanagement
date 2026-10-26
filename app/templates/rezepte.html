@@ -9,7 +9,7 @@
   {% for r, ings in recipes %}
   <li>
     <details>
-      <summary>{{ r.name }}{% if r.kind == 'batch' %} <span class="tag">vorkochen</span>{% endif %}</summary>
+      <summary>{{ r.name }}{% if r.kind == 'batch' %} <span class="tag">vorkochen</span>{% endif %}{% if not r.active %} <span class="tag">inaktiv</span>{% endif %}</summary>
       {% if r.notes %}<p class="sub">{{ r.notes }}</p>{% endif %}
       <ul class="ings">
         {% for i in ings %}<li><span>{{ i.name }}</span><span>{{ fmt_qty(i.qty, i.unit) }}</span></li>{% endfor %}
@@ -19,6 +19,15 @@
                aria-label="{% if r.kind == 'batch' %}Anzahl Batches{% else %}Portionen{% endif %}">
         <button class="quiet">{% if r.kind == 'batch' %}Gekocht (Batch){% else %}Außer Plan gekocht{% endif %}</button>
       </form>
+      <div class="row">
+        <a class="button" href="{{ url_for('recipe_edit', rid=r.id) }}">Bearbeiten</a>
+        {% if r.kind == 'meal' %}
+        <form method="post" action="{{ url_for('recipe_active', rid=r.id) }}">
+          <input type="hidden" name="active" value="{{ 0 if r.active else 1 }}">
+          <button class="quiet">{{ 'Deaktivieren' if r.active else 'Aktivieren' }}</button>
+        </form>
+        {% endif %}
+      </div>
     </details>
   </li>
   {% endfor %}

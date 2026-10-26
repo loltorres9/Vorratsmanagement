@@ -8,7 +8,8 @@ Google-Keep-Sync. Für einen Ein-Personen-Haushalt, gehostet auf Railway.
 1. **Einmalig Inventur:** Unter *Vorrat* eintragen, was gerade da ist, und speichern.
 2. **Vor dem Einkauf:** Unter *Einkauf* auf „Neu berechnen“ tippen. Die App nimmt die
    Gerichte der nächsten 7 Tage, zieht deinen Vorrat ab, ergänzt Mindestbestände und
-   rundet auf Packungen. Läuft der Keep-Sync, landet alles automatisch in Keep.
+   rundet auf Packungen. Haltbare Zutaten (Vorrat, TK) hältst du zusätzlich für
+   10 Tage Speiseplan vorrätig (`RESERVE_DAYS`), Frischware nur für 7. Läuft der Keep-Sync, landet alles automatisch in Keep.
 3. **Im Laden:** In Keep (oder in der App) abhaken. Abgehaktes wird als gekauft in den
    Vorrat gebucht.
 4. **Nach dem Kochen:** Auf *Heute* „Gekocht“ tippen. Die Zutaten werden abgezogen.

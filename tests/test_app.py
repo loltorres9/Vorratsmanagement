@@ -57,6 +57,46 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(row["recipe_id"], other)
 
 
+class RecipeEditTest(unittest.TestCase):
+    def test_inactive_recipe_leaves_rotation_and_plan(self):
+        conn = fresh_conn()
+        logic.ensure_plan(conn, MONDAY, 7)
+        rid, _ = logic.rotation_recipe(conn, MONDAY)
+        old_today = logic.today
+        logic.today = lambda: MONDAY
+        try:
+            logic.set_recipe_active(conn, rid, False)
+        finally:
+            logic.today = old_today
+        self.assertIsNone(logic.rotation_recipe(conn, MONDAY)[0])
+        self.assertIsNone(conn.execute("SELECT 1 FROM meal_plan WHERE date=?", (MONDAY.isoformat(),)).fetchone())
+        logic.ensure_plan(conn, MONDAY, 7)
+        self.assertIsNone(conn.execute("SELECT 1 FROM meal_plan WHERE date=?", (MONDAY.isoformat(),)).fetchone())
+        logic.set_recipe_active(conn, rid, True)
+        self.assertEqual(logic.rotation_recipe(conn, MONDAY)[0], rid)
+
+    def test_update_recipe(self):
+        conn = fresh_conn()
+        rid, _ = logic.rotation_recipe(conn, MONDAY)
+        reis = pid(conn, "Reis")
+        logic.update_recipe(conn, rid, " Neues Gericht ", "Notiz", {reis: 123})
+        r = conn.execute("SELECT * FROM recipes WHERE id=?", (rid,)).fetchone()
+        self.assertEqual((r["name"], r["notes"]), ("Neues Gericht", "Notiz"))
+        self.assertEqual([(i["name"], i["qty"]) for i in logic.ingredients(conn, rid)], [("Reis", 123)])
+        with self.assertRaises(ValueError):
+            logic.update_recipe(conn, rid, "", "", {reis: 1})
+        with self.assertRaises(ValueError):
+            logic.update_recipe(conn, rid, "X", "", {reis: 0})
+
+    def test_migration_adds_active_column(self):
+        tmp = tempfile.mkdtemp()
+        conn = db.connect(os.path.join(tmp, "old.db"))
+        conn.execute("CREATE TABLE recipes (id INTEGER PRIMARY KEY, name TEXT, kind TEXT, "
+                     "yields_product_id INTEGER, yields_qty REAL, notes TEXT)")
+        db.migrate(conn)
+        self.assertIn("active", {r["name"] for r in conn.execute("PRAGMA table_info(recipes)")})
+
+
 class NeedsTest(unittest.TestCase):
     def test_week_needs_and_batch_expansion(self):
         conn = fresh_conn()
@@ -78,6 +118,40 @@ class NeedsTest(unittest.TestCase):
         needs, hints = logic.compute_needs(conn, MONDAY, 7)
         self.assertNotIn("Gulaschfleisch", {n["name"] for n in needs})
         self.assertEqual(hints, [])
+
+    def test_reserve_only_for_durable_products(self):
+        conn = fresh_conn()
+        logic.ensure_plan(conn, MONDAY, 14)
+        short, _ = logic.compute_needs(conn, MONDAY, 7, reserve_days=7)
+        long, _ = logic.compute_needs(conn, MONDAY, 7, reserve_days=10)
+        short = {n["name"]: n for n in short}
+        long = {n["name"]: n for n in long}
+        self.assertTrue(set(short) <= set(long))
+        for name, n in long.items():
+            if n["location"] == "Kühlschrank":
+                self.assertEqual(n["need"], short[name]["need"], name)
+            else:
+                self.assertGreaterEqual(n["need"], short.get(name, {"need": 0})["need"] - 1e-9, name)
+        self.assertTrue(any(n["location"] != "Kühlschrank" and n["need"] > short.get(k, {"need": 0})["need"]
+                            for k, n in long.items()))
+
+    def test_freezer_capacity_shortens_tk_reserve(self):
+        conn = fresh_conn()
+        logic.ensure_plan(conn, MONDAY, 14)
+        pommes = pid(conn, "Pommes (TK)")
+        # Pommes an jedem Tag der Rotation: viel TK-Bedarf
+        conn.execute("UPDATE recipe_ingredients SET qty = 400 WHERE product_id = ?", (pommes,))
+        conn.commit()
+        free, _ = logic.compute_needs(conn, MONDAY, 7, reserve_days=10, tk_capacity_g=10**9)
+        capped, hints = logic.compute_needs(conn, MONDAY, 7, reserve_days=10, tk_capacity_g=2500)
+
+        def tk(ns):
+            return sum(n["qty"] for n in ns if n["location"] == "TK")
+        self.assertLessEqual(tk(capped), tk(free))
+        if tk(capped) < tk(free):
+            self.assertTrue(any("Tiefkühlfach" in h for h in hints))
+        self.assertFalse(any("Tiefkühlfach" in h for h in logic.compute_needs(
+            conn, MONDAY, 7, reserve_days=10, tk_capacity_g=10**9)[1]))
 
     def test_min_stock_without_plan(self):
         conn = fresh_conn()
@@ -219,6 +293,21 @@ class WebTest(unittest.TestCase):
         self.assertIn("Kaffee", self.c.get("/einkauf").get_data(as_text=True))
         t = logic.today().isoformat()
         self.assertEqual(self.c.post(f"/plan/{t}/cook").status_code, 302)
+
+    def test_recipe_edit_and_deactivate(self):
+        self.login()
+        conn = db.connect(self.app.config["DATABASE_PATH"])
+        rid = conn.execute("SELECT id FROM recipes WHERE kind='meal' ORDER BY id").fetchone()["id"]
+        page = self.c.get(f"/rezepte/{rid}/edit")
+        self.assertEqual(page.status_code, 200)
+        ings = logic.ingredients(conn, rid)
+        data = {"name": "Umbenannt", "notes": ""}
+        data.update({f"qty_{i['id']}": "55" for i in ings})
+        self.assertEqual(self.c.post(f"/rezepte/{rid}/edit", data=data).status_code, 302)
+        self.assertIn("Umbenannt", self.c.get("/rezepte").get_data(as_text=True))
+        self.assertEqual(self.c.post(f"/rezepte/{rid}/active", data={"active": "0"}).status_code, 302)
+        self.assertIn("inaktiv", self.c.get("/rezepte").get_data(as_text=True))
+        self.assertEqual(self.c.get("/plan").status_code, 200)
 
 
 if __name__ == "__main__":
