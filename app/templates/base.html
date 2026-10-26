@@ -15,7 +15,10 @@
 </head>
 <body>
   {% if storage_warning %}
-  <div class="flash" role="alert"><strong>Achtung:</strong> Die Daten werden nicht dauerhaft gespeichert. Nach jedem Deploy sind Rezepte und Vorrat wieder auf dem Startstand. In Railway ein Volume an <code>/data</code> hängen.</div>
+  <div class="flash" role="alert"><strong>Achtung:</strong> Die Daten werden nicht dauerhaft gespeichert. Nach jedem Deploy sind Rezepte und Vorrat wieder auf dem Startstand. In Railway ein Volume an <code>/data</code> hängen.<br>
+    <small>Technisch: DATA_DIR = <code>{{ storage_info.data_dir }}</code>,
+    Railway-Volume-Pfad = <code>{{ storage_info.railway_volume_mount_path or 'nicht gesetzt' }}</code>,
+    eingehängt = {{ 'ja' if storage_info.is_mount else 'nein' }}</small></div>
   {% endif %}
   <main class="page">
     {% with messages = get_flashed_messages() %}

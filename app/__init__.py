@@ -38,7 +38,7 @@ def create_app(test_config=None):
     if not db.storage_is_persistent():
         app.logger.error(
             "DATA_DIR=%s ist kein Volume: Die Datenbank geht bei jedem Deploy verloren. "
-            "In Railway ein Volume an diesen Pfad hängen.", db.data_dir())
+            "In Railway ein Volume an diesen Pfad hängen. Details: %s", db.data_dir(), db.storage_info())
 
     with app.app_context():
         conn = make_conn()
@@ -98,12 +98,13 @@ def create_app(test_config=None):
             "keep_enabled": keep_sync.enabled(),
             "nav": request.endpoint,
             "storage_warning": not db.storage_is_persistent(),
+            "storage_info": db.storage_info(),
         }
 
     @app.get("/healthz")
     def healthz():
         get_conn().execute("SELECT 1")
-        return {"ok": True, "persistent": db.storage_is_persistent()}
+        return {"ok": True, **db.storage_info()}
 
     # --------------------------------------------------------------------- Login
 
