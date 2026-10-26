@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Zutaten – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Zutaten</h1>
+  <p class="sub">Tippe auf eine Zutat, um Name, Einheit (z. B. g, Tasse, EL), Lagerort und Packungsgröße zu ändern.</p>
+</header>
+{% for loc, products in groups.items() %}
+<h2>{{ loc }}</h2>
+<ul class="ings">
+  {% for p in products %}
+  <li>
+    <a href="{{ url_for('ingredient_edit', pid=p.id) }}">{{ p.name }}</a>
+    <span>{{ p.unit }}{% if p.pack_size %} · Packung {{ fmt_qty(p.pack_size, p.unit) }}{% endif %}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+
+<details class="newprod">
+  <summary>Neue Zutat anlegen</summary>
+  <form method="post" action="{{ url_for('stock_new') }}" class="stack">
+    <label>Name <input name="name" required></label>
+    <label>Einheit
+      <select name="unit">{% for u in units %}<option>{{ u }}</option>{% endfor %}</select>
+    </label>
+    <label>Lagerort
+      <select name="location">{% for l in locations %}<option>{{ l }}</option>{% endfor %}</select>
+    </label>
+    <label>Kategorie <input name="category" placeholder="z. B. Molkerei"></label>
+    <label>Mindestbestand <input name="min_stock" inputmode="decimal" placeholder="0"></label>
+    <label>Packungsgröße <input name="pack_size" inputmode="decimal" placeholder="z. B. 500"></label>
+    <button class="primary">Anlegen</button>
+  </form>
+</details>
+{% endblock %}

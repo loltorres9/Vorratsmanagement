@@ -37,7 +37,7 @@
     <div class="stack">
       <label>Name <input name="new_name" placeholder="z. B. Lauch"></label>
       <label>Einheit
-        <select name="new_unit"><option>g</option><option>ml</option><option>Stk</option><option>Portion</option></select>
+        <select name="new_unit">{% for u in units %}<option>{{ u }}</option>{% endfor %}</select>
       </label>
       <label>Lagerort
         <select name="new_location"><option>Vorrat</option><option>Kühlschrank</option><option>TK</option></select>
