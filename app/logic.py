@@ -17,8 +17,9 @@ from . import db
 
 EPS = 1e-9
 LOCATION_ORDER = {"Vorrat": 0, "Kühlschrank": 1, "TK": 2}
-# Haltbare Orte: dafür wird die Reserve (RESERVE_DAYS) vorgehalten, Frischware nicht.
-RESERVE_LOCATIONS = ("Vorrat", "TK")
+# Grobe Gewichte für das Tiefkühlfach (Einheit „Portion“ bzw. „Stk“ in Gramm).
+PORTION_G = 400
+PIECE_G = 100
 
 
 # --------------------------------------------------------------------------- Zeit
@@ -223,25 +224,58 @@ def requirements(conn, start: date, days: int):
     return req
 
 
+def _weight_g(unit, qty):
+    """Grobes Gewicht für die Tiefkühlfach-Rechnung."""
+    return qty * PORTION_G if unit == "Portion" else qty * PIECE_G if unit == "Stk" else qty
+
+
 def compute_needs(conn, start: date | None = None, days: int | None = None,
-                  reserve_days: int | None = None):
+                  reserve_days: int | None = None, tk_capacity_g: float | None = None):
     """Was muss gekauft werden? Liste von dicts, sortiert nach Laden-Reihenfolge.
 
     Bedarf = Zutaten der nächsten `days` Tage + Mindestbestand − Bestand.
     Haltbare Produkte (Vorrat, TK) werden zusätzlich für `reserve_days` Tage
     (Standard 10, Umgebungsvariable RESERVE_DAYS) vorgehalten, Frischware nicht.
+    Passt die TK-Reserve nicht ins Tiefkühlfach (`tk_capacity_g`, Standard 4000 g,
+    Umgebungsvariable TK_CAPACITY_G), wird ihr Zeitraum verkürzt, mindestens auf `days`.
     Selbstgemachte Produkte (made_by_recipe_id) werden in die Zutaten ihres
     Batch-Rezepts aufgelöst, statt selbst auf der Liste zu landen.
     """
     start = start or today()
     days = days or int(os.environ.get("PLAN_DAYS", 7))
-    products = {p["id"]: p for p in conn.execute("SELECT * FROM products WHERE active = 1")}
     reserve_days = int(os.environ.get("RESERVE_DAYS", 10)) if reserve_days is None else reserve_days
+    cap = float(os.environ.get("TK_CAPACITY_G", 4000)) if tk_capacity_g is None else tk_capacity_g
+    reserve_days = max(reserve_days, days)
+    for tk_days in range(reserve_days, days - 1, -1):
+        needs, hints = _needs(conn, start, days, reserve_days, tk_days)
+        tk_total = _tk_weight(conn, needs)
+        if cap <= 0 or tk_total <= cap or tk_days == days:
+            break
+    if tk_days < reserve_days:
+        msg = f"Tiefkühlfach voll: TK-Reserve nur für {tk_days} statt {reserve_days} Tage"
+        if tk_total > cap > 0:
+            msg += f" (auch das übersteigt {fmt_qty(cap, 'g')})"
+        hints.append(msg)
+    return needs, hints
+
+
+def _tk_weight(conn, needs):
+    """Gewicht im Tiefkühlfach, wenn alles Eingekaufte drin liegt."""
+    bought = {n["product_id"]: n["qty"] for n in needs}
+    total = 0.0
+    for p in conn.execute("SELECT * FROM products WHERE active = 1 AND location = 'TK'"):
+        total += _weight_g(p["unit"], p["stock"] + bought.get(p["id"], 0))
+    return total
+
+
+def _needs(conn, start, days, reserve_days, tk_days):
+    products = {p["id"]: p for p in conn.execute("SELECT * FROM products WHERE active = 1")}
     req = requirements(conn, start, days)
-    if reserve_days > days:
-        for pid, qty in requirements(conn, start, reserve_days).items():
-            if products.get(pid) and products[pid]["location"] in RESERVE_LOCATIONS:
-                req[pid] = qty
+    for horizon, locations in ((reserve_days, ("Vorrat",)), (tk_days, ("TK",))):
+        if horizon > days:
+            for pid, qty in requirements(conn, start, horizon).items():
+                if products.get(pid) and products[pid]["location"] in locations:
+                    req[pid] = qty
     hints = []
 
     for p in list(products.values()):

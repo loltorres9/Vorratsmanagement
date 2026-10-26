@@ -135,6 +135,24 @@ class NeedsTest(unittest.TestCase):
         self.assertTrue(any(n["location"] != "Kühlschrank" and n["need"] > short.get(k, {"need": 0})["need"]
                             for k, n in long.items()))
 
+    def test_freezer_capacity_shortens_tk_reserve(self):
+        conn = fresh_conn()
+        logic.ensure_plan(conn, MONDAY, 14)
+        pommes = pid(conn, "Pommes (TK)")
+        # Pommes an jedem Tag der Rotation: viel TK-Bedarf
+        conn.execute("UPDATE recipe_ingredients SET qty = 400 WHERE product_id = ?", (pommes,))
+        conn.commit()
+        free, _ = logic.compute_needs(conn, MONDAY, 7, reserve_days=10, tk_capacity_g=10**9)
+        capped, hints = logic.compute_needs(conn, MONDAY, 7, reserve_days=10, tk_capacity_g=2500)
+
+        def tk(ns):
+            return sum(n["qty"] for n in ns if n["location"] == "TK")
+        self.assertLessEqual(tk(capped), tk(free))
+        if tk(capped) < tk(free):
+            self.assertTrue(any("Tiefkühlfach" in h for h in hints))
+        self.assertFalse(any("Tiefkühlfach" in h for h in logic.compute_needs(
+            conn, MONDAY, 7, reserve_days=10, tk_capacity_g=10**9)[1]))
+
     def test_min_stock_without_plan(self):
         conn = fresh_conn()
         needs, _ = logic.compute_needs(conn, MONDAY, 0)
