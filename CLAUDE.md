@@ -45,6 +45,8 @@ tests/test_app.py   unittest (läuft auch mit pytest)
 ## Kernregeln (nicht versehentlich ändern)
 1. **Bedarf** = Zutaten aller *geplanten* Gerichte der nächsten `PLAN_DAYS` Tage
    + Mindestbestand − Bestand; aufgerundet auf ganze Packungen (`pack_size`).
+1a. **Reserve**: haltbare Produkte (Vorrat, TK) werden für `RESERVE_DAYS` (Standard 10) Plan-Tage
+   vorgehalten, Frischware (Kühlschrank) nur für `PLAN_DAYS`. Rollierend: nach dem Kochen wird nachgekauft.
 2. **Selbstgemachtes** (made_by_recipe_id) landet nie auf der Liste; stattdessen werden
    die Zutaten seines Batch-Rezepts (×Anzahl nötiger Batches) eingeplant + Hinweis.
 3. `ensure_plan` füllt nur fehlende Tage aus der Rotation – manuelle Änderungen bleiben.

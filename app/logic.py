@@ -16,6 +16,8 @@ from . import db
 
 EPS = 1e-9
 LOCATION_ORDER = {"Vorrat": 0, "Kühlschrank": 1, "TK": 2}
+# Haltbare Orte: dafür wird die Reserve (RESERVE_DAYS) vorgehalten, Frischware nicht.
+RESERVE_LOCATIONS = ("Vorrat", "TK")
 
 
 # --------------------------------------------------------------------------- Zeit
@@ -182,17 +184,25 @@ def requirements(conn, start: date, days: int):
     return req
 
 
-def compute_needs(conn, start: date | None = None, days: int | None = None):
+def compute_needs(conn, start: date | None = None, days: int | None = None,
+                  reserve_days: int | None = None):
     """Was muss gekauft werden? Liste von dicts, sortiert nach Laden-Reihenfolge.
 
     Bedarf = Zutaten der nächsten `days` Tage + Mindestbestand − Bestand.
+    Haltbare Produkte (Vorrat, TK) werden zusätzlich für `reserve_days` Tage
+    (Standard 10, Umgebungsvariable RESERVE_DAYS) vorgehalten, Frischware nicht.
     Selbstgemachte Produkte (made_by_recipe_id) werden in die Zutaten ihres
     Batch-Rezepts aufgelöst, statt selbst auf der Liste zu landen.
     """
     start = start or today()
     days = days or int(os.environ.get("PLAN_DAYS", 7))
     products = {p["id"]: p for p in conn.execute("SELECT * FROM products WHERE active = 1")}
+    reserve_days = int(os.environ.get("RESERVE_DAYS", 10)) if reserve_days is None else reserve_days
     req = requirements(conn, start, days)
+    if reserve_days > days:
+        for pid, qty in requirements(conn, start, reserve_days).items():
+            if products.get(pid) and products[pid]["location"] in RESERVE_LOCATIONS:
+                req[pid] = qty
     hints = []
 
     for p in list(products.values()):
@@ -225,13 +235,14 @@ def compute_needs(conn, start: date | None = None, days: int | None = None):
 
 # ----------------------------------------------------------------- Einkaufsliste
 
-def refresh_shopping_list(conn, start: date | None = None, days: int | None = None):
+def refresh_shopping_list(conn, start: date | None = None, days: int | None = None,
+                          reserve_days: int | None = None):
     """Gleicht die automatischen Einträge mit dem aktuellen Bedarf ab.
 
     Bestehende Einträge werden aktualisiert statt neu angelegt, damit die
     Verknüpfung zu Google Keep erhalten bleibt.
     """
-    needs, hints = compute_needs(conn, start, days)
+    needs, hints = compute_needs(conn, start, days, reserve_days)
     open_rows = conn.execute("SELECT * FROM shopping_items WHERE status = 'open'").fetchall()
     auto = {r["product_id"]: r for r in open_rows if r["source"] == "auto"}
     manual_pids = {r["product_id"] for r in open_rows if r["source"] != "auto" and r["product_id"]}

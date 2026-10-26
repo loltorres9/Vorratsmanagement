@@ -79,6 +79,22 @@ class NeedsTest(unittest.TestCase):
         self.assertNotIn("Gulaschfleisch", {n["name"] for n in needs})
         self.assertEqual(hints, [])
 
+    def test_reserve_only_for_durable_products(self):
+        conn = fresh_conn()
+        logic.ensure_plan(conn, MONDAY, 14)
+        short, _ = logic.compute_needs(conn, MONDAY, 7, reserve_days=7)
+        long, _ = logic.compute_needs(conn, MONDAY, 7, reserve_days=10)
+        short = {n["name"]: n for n in short}
+        long = {n["name"]: n for n in long}
+        self.assertTrue(set(short) <= set(long))
+        for name, n in long.items():
+            if n["location"] == "Kühlschrank":
+                self.assertEqual(n["need"], short[name]["need"], name)
+            else:
+                self.assertGreaterEqual(n["need"], short.get(name, {"need": 0})["need"] - 1e-9, name)
+        self.assertTrue(any(n["location"] != "Kühlschrank" and n["need"] > short.get(k, {"need": 0})["need"]
+                            for k, n in long.items()))
+
     def test_min_stock_without_plan(self):
         conn = fresh_conn()
         needs, _ = logic.compute_needs(conn, MONDAY, 0)
