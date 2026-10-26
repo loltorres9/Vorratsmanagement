@@ -121,9 +121,10 @@ def apply_recipe_import(conn, path: Path = IMPORT_FILE) -> bool:
 
     for r in data["recipes"]:
         row = conn.execute(
-            "SELECT id FROM recipes WHERE name IN (?, ?)", (r["match"], r.get("rename", r["match"]))
+            "SELECT id, user_edited FROM recipes WHERE name IN (?, ?)",
+            (r["match"], r.get("rename", r["match"])),
         ).fetchone()
-        if not row:
+        if not row or row["user_edited"]:
             continue
         current = per_portion_now(row["id"])
         conn.execute(
@@ -133,7 +134,9 @@ def apply_recipe_import(conn, path: Path = IMPORT_FILE) -> bool:
         write(row["id"], r, current)
 
     for r in data["new_recipes"]:
-        row = conn.execute("SELECT id FROM recipes WHERE name = ?", (r["name"],)).fetchone()
+        row = conn.execute("SELECT id, user_edited FROM recipes WHERE name = ?", (r["name"],)).fetchone()
+        if row and row["user_edited"]:
+            continue
         if row:
             conn.execute("UPDATE recipes SET notes = ?, servings = ? WHERE id = ?",
                          (r["notes"], r["servings"], row["id"]))
@@ -157,10 +160,10 @@ def apply_dampfnudeln_fix(conn) -> bool:
     """Dampfnudeln werden gekauft (gekühlt), nicht selbst gemacht: zurück auf 2 Stück + Vanillesoße pro Portion."""
     if db.get_setting(conn, FIX_DAMPFNUDELN_KEY):
         return False
-    row = conn.execute("SELECT id FROM recipes WHERE name = 'Dampfnudeln mit Vanillesoße'").fetchone()
+    row = conn.execute("SELECT id, user_edited FROM recipes WHERE name = 'Dampfnudeln mit Vanillesoße'").fetchone()
     prods = {r["name"]: r["id"] for r in conn.execute(
         "SELECT id, name FROM products WHERE name IN ('Dampfnudeln', 'Vanillesoße')")}
-    if row and len(prods) == 2:
+    if row and not row["user_edited"] and len(prods) == 2:
         conn.execute("UPDATE recipes SET servings = 1, notes = '' WHERE id = ?", (row["id"],))
         conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (row["id"],))
         conn.executemany(

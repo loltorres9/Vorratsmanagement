@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS recipes (
     yields_qty        REAL,
     notes             TEXT NOT NULL DEFAULT '',
     active            INTEGER NOT NULL DEFAULT 1,  -- 0 = nicht mehr in der Rotation
-    servings          REAL NOT NULL DEFAULT 1      -- Portionen, für die die Zutatenmengen gelten
+    servings          REAL NOT NULL DEFAULT 1,     -- Portionen, für die die Zutatenmengen gelten
+    user_edited       INTEGER NOT NULL DEFAULT 0   -- 1 = in der App bearbeitet, Importe fassen es nicht mehr an
 );
 CREATE TABLE IF NOT EXISTS recipe_ingredients (
     recipe_id  INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
@@ -101,6 +102,8 @@ def migrate(conn: sqlite3.Connection) -> None:
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(recipes)")}
     if "active" not in cols:
         conn.execute("ALTER TABLE recipes ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
+    if "user_edited" not in cols:
+        conn.execute("ALTER TABLE recipes ADD COLUMN user_edited INTEGER NOT NULL DEFAULT 0")
     if "servings" not in cols:
         conn.execute("ALTER TABLE recipes ADD COLUMN servings REAL NOT NULL DEFAULT 1")
 

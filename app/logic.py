@@ -174,7 +174,7 @@ def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None, se
     try:
         conn.execute(
             "UPDATE recipes SET name = ?, notes = ?, yields_qty = COALESCE(?, yields_qty), "
-            "servings = COALESCE(?, servings) WHERE id = ?",
+            "servings = COALESCE(?, servings), user_edited = 1 WHERE id = ?",
             (name, (notes or "").strip(), yields_qty, servings, recipe_id),
         )
     except sqlite3.IntegrityError:

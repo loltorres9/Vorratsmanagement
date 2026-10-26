@@ -124,6 +124,27 @@ class RecipeImportTest(unittest.TestCase):
             self.assertTrue(logic.ingredients(conn, r["id"]))
 
 
+class UserEditsProtectedTest(unittest.TestCase):
+    def test_import_skips_recipes_edited_in_the_app(self):
+        conn = fresh_conn()
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
+        reis = pid(conn, "Reis")
+        logic.update_recipe(conn, rid, "Lasagne mit Salat", "meine Version", {reis: 77})
+        seed.apply_recipe_import(conn)
+        ings = {i["name"]: i["qty"] for i in logic.ingredients(conn, rid)}
+        self.assertEqual(ings, {"Reis": 77})
+        other = conn.execute("SELECT id FROM recipes WHERE name='Waffeln mit Obst & Quark'").fetchone()["id"]
+        self.assertIn("Mehl", {i["name"] for i in logic.ingredients(conn, other)})
+        self.assertEqual(conn.execute("SELECT servings FROM recipes WHERE id=?", (other,)).fetchone()[0], 3)
+
+    def test_dampfnudeln_fix_skips_edited_recipe(self):
+        conn = fresh_conn()
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Dampfnudeln mit Vanillesoße'").fetchone()["id"]
+        logic.update_recipe(conn, rid, "Dampfnudeln mit Vanillesoße", "", {pid(conn, "Dampfnudeln"): 3})
+        seed.apply_dampfnudeln_fix(conn)
+        self.assertEqual([i["qty"] for i in logic.ingredients(conn, rid)], [3])
+
+
 class NewIngredientTest(unittest.TestCase):
     def test_create_product_is_idempotent_and_validates(self):
         conn = fresh_conn()
