@@ -74,7 +74,9 @@ CREATE TABLE IF NOT EXISTS settings (
 
 
 def data_dir() -> Path:
-    p = Path(os.environ.get("DATA_DIR", "./data"))
+    # Hängt auf Railway ein Volume am Service, liegt die Datenbank immer dort, auch wenn eine
+    # Variable DATA_DIR (z. B. ./data aus .env.example) etwas anderes sagt.
+    p = Path(os.environ.get("RAILWAY_VOLUME_MOUNT_PATH") or os.environ.get("DATA_DIR", "./data"))
     p.mkdir(parents=True, exist_ok=True)
     return p
 
