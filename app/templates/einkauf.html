@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Einkauf – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Einkaufsliste</h1>
+  <div class="row">
+    <form method="post" action="{{ url_for('shopping_refresh') }}"><button class="primary">Neu berechnen</button></form>
+    {% if keep_enabled %}
+    <form method="post" action="{{ url_for('shopping_sync') }}"><button class="quiet">Mit Keep abgleichen</button></form>
+    {% endif %}
+  </div>
+  <p class="sub">Antippen bucht den Posten als gekauft in den Vorrat.</p>
+  {% if keep_enabled %}
+  <p class="sub">Letzter Keep-Abgleich: {{ last_sync or 'noch keiner' }}</p>
+  {% if last_error %}<p class="warn">{{ last_error }}</p>{% endif %}
+  {% endif %}
+</header>
+
+{% if not count %}
+<section class="empty">
+  <p>Nichts zu kaufen. „Neu berechnen“ prüft den Plan der nächsten Tage gegen deinen Vorrat.</p>
+</section>
+{% endif %}
+
+{% for loc, items in groups.items() %}
+<h2>{{ loc }}</h2>
+<ul class="shop">
+  {% for it in items %}
+  <li>
+    <form method="post" action="{{ url_for('shopping_bought', item_id=it.id) }}" class="grow">
+      <button class="check" aria-label="{{ it.name }} gekauft">
+        <span class="name">{{ it.name }}</span>
+        <span class="qty">{% if it.packs and it.packs > 1 %}{{ it.packs }}× · {% endif %}{{ fmt_qty(it.qty, it.unit) }}</span>
+      </button>
+    </form>
+    <form method="post" action="{{ url_for('shopping_dismiss', item_id=it.id) }}">
+      <button class="x" aria-label="{{ it.name }} entfernen">✕</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+
+<h2>Etwas dazuschreiben</h2>
+<form method="post" action="{{ url_for('shopping_add') }}" class="addrow">
+  <input name="name" placeholder="z. B. Kaffee" aria-label="Was" required>
+  <input name="qty" inputmode="decimal" placeholder="Menge" aria-label="Menge" class="portions">
+  <button class="primary">Hinzufügen</button>
+</form>
+
+{% if cost and cost.priced %}
+<p class="sub">Geschätzt {{ '%.2f'|format(cost.total or 0) | replace('.', ',') }} € für {{ cost.priced }} von {{ cost.n }} Posten mit Preis.</p>
+{% endif %}
+{% endblock %}

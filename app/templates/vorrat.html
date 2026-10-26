@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Vorrat – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Vorrat</h1>
+  <p class="sub">Trag ein, was du gerade da hast, und speichere unten. Die Knöpfe ändern um eine Packung.</p>
+</header>
+
+<form method="post" action="{{ url_for('stock_inventory') }}" id="inventur"></form>
+{% for loc, products in groups.items() %}
+<h2>{{ loc }}</h2>
+<ul class="stock">
+  {% for p in products %}
+  <li id="p{{ p.id }}" class="{% if p.min_stock and p.stock < p.min_stock %}low{% endif %}">
+    <div class="pname">
+      <span>{{ p.name }}</span>
+      {% if p.min_stock %}<small>mind. {{ fmt_qty(p.min_stock, p.unit) }}</small>{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('stock_adjust', pid=p.id) }}">
+      <input type="hidden" name="delta" value="-{{ p.pack_size or 1 }}">
+      <button class="step" aria-label="{{ p.name }} weniger">−</button>
+    </form>
+    <label class="amount">
+      <input form="inventur" name="stock_{{ p.id }}" inputmode="decimal"
+             value="{{ num(p.stock) }}" aria-label="Bestand {{ p.name }}">
+      <span>{{ p.unit }}</span>
+    </label>
+    <form method="post" action="{{ url_for('stock_adjust', pid=p.id) }}">
+      <input type="hidden" name="delta" value="{{ p.pack_size or 1 }}">
+      <button class="step" aria-label="{{ p.name }} mehr">+</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+<div class="sticky-save"><button class="primary" form="inventur">Bestände speichern</button></div>
+
+<details class="newprod">
+  <summary>Neues Produkt anlegen</summary>
+  <form method="post" action="{{ url_for('stock_new') }}" class="stack">
+    <label>Name <input name="name" required></label>
+    <label>Einheit
+      <select name="unit"><option>g</option><option>ml</option><option>Stk</option><option>Portion</option></select>
+    </label>
+    <label>Lagerort
+      <select name="location"><option>Vorrat</option><option>Kühlschrank</option><option>TK</option></select>
+    </label>
+    <label>Kategorie <input name="category" placeholder="z. B. Molkerei"></label>
+    <label>Mindestbestand <input name="min_stock" inputmode="decimal" placeholder="0"></label>
+    <label>Packungsgröße <input name="pack_size" inputmode="decimal" placeholder="z. B. 500"></label>
+    <button class="primary">Anlegen</button>
+  </form>
+</details>
+{% endblock %}

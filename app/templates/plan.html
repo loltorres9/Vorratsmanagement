@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Plan – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Speiseplan</h1>
+  <p class="sub">Diese Woche ist Rotationswoche {{ week }}. Änderungen gelten nur für den jeweiligen Tag.</p>
+</header>
+<ol class="planlist">
+  {% for d in days %}
+  <li class="{{ d.status }}">
+    <form method="post" action="{{ url_for('plan_set', d=d.date) }}" class="planrow">
+      <span class="day">{{ day_label(d.date) }}</span>
+      <select name="recipe_id" aria-label="Gericht am {{ day_label(d.date) }}" onchange="this.form.submit()">
+        {% for r in recipes %}
+        <option value="{{ r.id }}" {% if r.id == d.recipe_id %}selected{% endif %}>{{ r.name }}</option>
+        {% endfor %}
+      </select>
+      <input name="portions" type="number" min="0.5" step="0.5" value="{{ d.portions|round(1) }}"
+             aria-label="Portionen" class="portions" onchange="this.form.submit()">
+      <noscript><button>Speichern</button></noscript>
+    </form>
+    {% if d.status == 'cooked' %}<span class="tag">gekocht</span>{% elif d.status == 'skipped' %}<span class="tag">übersprungen</span>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+<p class="sub">Tipp: 2 Portionen eintragen, wenn du für den nächsten Tag mitkochst oder einfrierst.</p>
+{% endblock %}
