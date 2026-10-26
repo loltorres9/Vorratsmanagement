@@ -5,7 +5,7 @@ import os
 from datetime import date, timedelta
 from functools import wraps
 
-from flask import Flask, flash, g, redirect, render_template, request, session, url_for
+from flask import Flask, flash, g, redirect, render_template, request, send_from_directory, session, url_for
 
 from . import db, keep_sync, logic, seed
 
@@ -113,6 +113,13 @@ def create_app(test_config=None):
     def logout():
         session.clear()
         return redirect(url_for("login"))
+
+    @app.get("/sw.js")
+    def service_worker():
+        # Muss im Wurzelpfad liegen, damit er die ganze App abdeckt.
+        resp = send_from_directory(app.static_folder, "sw.js", mimetype="text/javascript")
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
 
     # ---------------------------------------------------------------------- Heute
 

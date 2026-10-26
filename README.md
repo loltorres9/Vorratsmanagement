@@ -38,7 +38,7 @@ python -m pytest -q
    - optional `ROTATION_START` (ein Montag, der als Rotationswoche 1 zählt)
    - optional die `KEEP_*`-Variablen (siehe unten)
 4. Unter *Settings → Networking* eine Domain generieren. Auf dem Handy öffnen und
-   „Zum Startbildschirm hinzufügen“.
+   in Chrome (Android) das Menü ⋮ → *App installieren* (bzw. *Zum Startbildschirm hinzufügen*).
 
 `DATA_DIR=/data` ist im Dockerfile gesetzt. Beim ersten Start wird die Datenbank aus
 `seed/seed.json` befüllt; danach wird seed.json nicht mehr gelesen.
