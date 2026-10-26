@@ -178,6 +178,25 @@ class ProductEditTest(unittest.TestCase):
             logic.update_product(conn, reis, "Mehl", "g", "Vorrat")  # Name schon vergeben
 
 
+class StartupKeepsDataTest(unittest.TestCase):
+    def test_restart_does_not_touch_existing_recipes(self):
+        path = os.path.join(tempfile.mkdtemp(), "s.db")
+        cfg = {"TESTING": True, "DATABASE_PATH": path, "APP_PASSWORD": "x", "START_SYNC": False,
+               "SESSION_COOKIE_SECURE": False}
+        create_app(cfg)
+        conn = db.connect(path)
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
+        reis = pid(conn, "Reis")
+        conn.execute("UPDATE recipes SET notes='meine Notiz' WHERE id=?", (rid,))
+        conn.execute("DELETE FROM settings WHERE key LIKE 'import_%' OR key LIKE 'fix_%'")  # wie eine ältere Datenbank
+        conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id=?", (rid,))
+        conn.execute("INSERT INTO recipe_ingredients(recipe_id, product_id, qty) VALUES(?,?,?)", (rid, reis, 42))
+        conn.commit()
+        create_app(cfg)  # Neustart
+        self.assertEqual([(i["name"], i["qty"]) for i in logic.ingredients(conn, rid)], [("Reis", 42)])
+        self.assertEqual(conn.execute("SELECT notes FROM recipes WHERE id=?", (rid,)).fetchone()[0], "meine Notiz")
+
+
 class NewIngredientTest(unittest.TestCase):
     def test_create_product_is_idempotent_and_validates(self):
         conn = fresh_conn()
