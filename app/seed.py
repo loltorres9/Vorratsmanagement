@@ -148,3 +148,25 @@ def apply_recipe_import(conn, path: Path = IMPORT_FILE) -> bool:
     db.set_setting(conn, IMPORT_KEY, "1")
     conn.commit()
     return True
+
+
+FIX_DAMPFNUDELN_KEY = "fix_dampfnudeln_gekauft_v1"
+
+
+def apply_dampfnudeln_fix(conn) -> bool:
+    """Dampfnudeln werden gekauft (gekühlt), nicht selbst gemacht: zurück auf 2 Stück + Vanillesoße pro Portion."""
+    if db.get_setting(conn, FIX_DAMPFNUDELN_KEY):
+        return False
+    row = conn.execute("SELECT id FROM recipes WHERE name = 'Dampfnudeln mit Vanillesoße'").fetchone()
+    prods = {r["name"]: r["id"] for r in conn.execute(
+        "SELECT id, name FROM products WHERE name IN ('Dampfnudeln', 'Vanillesoße')")}
+    if row and len(prods) == 2:
+        conn.execute("UPDATE recipes SET servings = 1, notes = '' WHERE id = ?", (row["id"],))
+        conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (row["id"],))
+        conn.executemany(
+            "INSERT INTO recipe_ingredients(recipe_id, product_id, qty) VALUES(?,?,?)",
+            [(row["id"], prods["Dampfnudeln"], 2), (row["id"], prods["Vanillesoße"], 200)],
+        )
+    db.set_setting(conn, FIX_DAMPFNUDELN_KEY, "1")
+    conn.commit()
+    return True

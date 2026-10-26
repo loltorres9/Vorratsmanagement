@@ -124,6 +124,25 @@ class RecipeImportTest(unittest.TestCase):
             self.assertTrue(logic.ingredients(conn, r["id"]))
 
 
+class NewIngredientTest(unittest.TestCase):
+    def test_create_product_is_idempotent_and_validates(self):
+        conn = fresh_conn()
+        a = logic.create_product(conn, "Lauch", "Stk", "Kühlschrank", 1)
+        self.assertEqual(logic.create_product(conn, "lauch", "g", "Vorrat"), a)
+        self.assertEqual(conn.execute("SELECT location FROM products WHERE id=?", (a,)).fetchone()[0], "Kühlschrank")
+        with self.assertRaises(ValueError):
+            logic.create_product(conn, "Komisch", "Liter", "Vorrat")
+
+    def test_dampfnudeln_are_bought(self):
+        conn = fresh_conn()
+        seed.apply_recipe_import(conn)
+        self.assertTrue(seed.apply_dampfnudeln_fix(conn))
+        self.assertFalse(seed.apply_dampfnudeln_fix(conn))
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Dampfnudeln mit Vanillesoße'").fetchone()["id"]
+        self.assertEqual({i["name"]: i["per_portion"] for i in logic.ingredients(conn, rid)},
+                         {"Dampfnudeln": 2, "Vanillesoße": 200})
+
+
 class ServingsTest(unittest.TestCase):
     def test_cooking_and_needs_use_per_portion_amounts(self):
         conn = fresh_conn()
@@ -355,6 +374,17 @@ class WebTest(unittest.TestCase):
         self.assertIn("Kaffee", self.c.get("/einkauf").get_data(as_text=True))
         t = logic.today().isoformat()
         self.assertEqual(self.c.post(f"/plan/{t}/cook").status_code, 302)
+
+    def test_recipe_edit_creates_new_ingredient(self):
+        self.login()
+        conn = db.connect(self.app.config["DATABASE_PATH"])
+        rid = conn.execute("SELECT id FROM recipes WHERE kind='meal' ORDER BY id").fetchone()["id"]
+        data = {f"qty_{i['id']}": str(i["qty"]) for i in logic.ingredients(conn, rid)}
+        data.update({"name": "Test", "new_name": "Frischer Basilikum", "new_unit": "Stk",
+                     "new_location": "Kühlschrank", "new_qty": "1"})
+        self.assertEqual(self.c.post(f"/rezepte/{rid}/edit", data=data).status_code, 302)
+        names = {i["name"] for i in logic.ingredients(conn, rid)}
+        self.assertIn("Frischer Basilikum", names)
 
     def test_recipe_edit_and_deactivate(self):
         self.login()
