@@ -26,6 +26,7 @@ app/db.py           Schema (SCHEMA), connect(), Settings-Helfer
 app/logic.py        Kernlogik: Plan, Bedarf, Einkaufsliste, Bestand
 app/keep_sync.py    Google-Keep-Abgleich (sync_list ist rein und testbar)
 app/seed.py         lädt seed/seed.json in eine leere DB
+seed/rezeptordner.json  Rezepte aus dem Rezeptordner (Fotos); wird einmalig per seed.apply_recipe_import übernommen
 seed/seed.json      Produkte, 35 Rezepte (pro 1 Portion), 5-Wochen-Rotation, Gulasch-Batch
 app/templates/      Jinja-Templates (base, index, plan, einkauf, vorrat, rezepte, login)
 app/static/         style.css, manifest.json

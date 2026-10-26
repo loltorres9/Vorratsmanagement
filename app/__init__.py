@@ -40,6 +40,8 @@ def create_app(test_config=None):
         db.init(conn)
         if seed.ensure_seeded(conn):
             app.logger.info("Startdaten geladen")
+        if seed.apply_recipe_import(conn):
+            app.logger.info("Rezepte aus dem Rezeptordner übernommen")
         logic.ensure_plan(conn)
         conn.close()
 
