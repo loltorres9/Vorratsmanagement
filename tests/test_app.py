@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 import uuid
+from pathlib import Path
 from datetime import date, timedelta
 
 from app import create_app, db, keep_sync, logic, seed
@@ -212,6 +213,17 @@ class StorageWarningTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=False):
             for k in ("RAILWAY_ENVIRONMENT", "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_SERVICE_ID"):
                 os.environ.pop(k, None)
+            self.assertTrue(db.storage_is_persistent())
+
+
+class RailwayVolumePathTest(unittest.TestCase):
+    def test_volume_path_wins_over_data_dir_variable(self):
+        import unittest.mock as mock
+        vol = tempfile.mkdtemp()
+        with mock.patch.dict(os.environ, {"DATA_DIR": "./data", "RAILWAY_VOLUME_MOUNT_PATH": vol,
+                                          "RAILWAY_ENVIRONMENT": "production"}):
+            self.assertEqual(str(db.data_dir()), vol)
+            self.assertEqual(db.db_path().parent, Path(vol))
             self.assertTrue(db.storage_is_persistent())
 
 
