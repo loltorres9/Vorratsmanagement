@@ -75,14 +75,15 @@ def ensure_seeded(conn) -> bool:
 # ------------------------------------------------------------------ Rezeptordner
 
 IMPORT_FILE = SEED_FILE.parent / "rezeptordner.json"
-IMPORT_KEY = "import_rezeptordner_v1"
+IMPORT_KEY = "import_rezeptordner_v2"
 
 
 def apply_recipe_import(conn, path: Path = IMPORT_FILE) -> bool:
     """Übernimmt die Rezepte aus dem Rezeptordner (einmalig, auch in bestehenden Datenbanken).
 
-    Bestehende Gerichte werden anhand ihres Namens gefunden; ihre Zutaten werden ersetzt.
-    Ein Lauf ohne passenden Namen (z. B. weil das Rezept umbenannt wurde) überspringt es.
+    Die Mengen werden wie im Rezept gespeichert (für `servings` Portionen). Bestehende
+    Gerichte werden anhand ihres Namens gefunden (`match` oder `rename`); ihre Zutaten
+    werden ersetzt, Beilagen aus `keep` bleiben mit ihrer bisherigen Menge pro Portion.
     """
     if db.get_setting(conn, IMPORT_KEY):
         return False
@@ -95,44 +96,54 @@ def apply_recipe_import(conn, path: Path = IMPORT_FILE) -> bool:
         )
     pid = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM products")}
 
-    def per_portion(r, current):
-        ings = {name: qty for name, qty in current.items() if name in r.get("keep", [])}
-        for name, total in r["ingredients"].items():
-            ings[name] = round(total / r["servings"], 3)
-        ings.update(r.get("per_portion", {}))
-        return ings
-
-    def write(rid, ings):
+    def write(rid, r, current):
+        n = r["servings"]
+        ings = {name: qty * n for name, qty in current.items() if name in r.get("keep", [])}
+        ings.update(r["ingredients"])
+        ings.update({name: qty * n for name, qty in r.get("per_portion", {}).items()})
         conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (rid,))
         for name, qty in ings.items():
             if name not in pid:
                 raise ValueError(f"Rezeptordner: unbekanntes Produkt '{name}'")
             conn.execute(
                 "INSERT INTO recipe_ingredients(recipe_id, product_id, qty) VALUES(?,?,?)",
-                (rid, pid[name], qty),
+                (rid, pid[name], round(qty, 3)),
             )
 
+    def per_portion_now(rid):
+        return {
+            x["name"]: x["per_portion"]
+            for x in conn.execute(
+                "SELECT p.name, ri.qty / r.servings AS per_portion FROM recipe_ingredients ri "
+                "JOIN products p ON p.id = ri.product_id JOIN recipes r ON r.id = ri.recipe_id "
+                "WHERE ri.recipe_id = ?", (rid,))
+        }
+
     for r in data["recipes"]:
-        row = conn.execute("SELECT id FROM recipes WHERE name = ?", (r["match"],)).fetchone()
+        row = conn.execute(
+            "SELECT id FROM recipes WHERE name IN (?, ?)", (r["match"], r.get("rename", r["match"]))
+        ).fetchone()
         if not row:
             continue
-        current = {
-            x["name"]: x["qty"]
-            for x in conn.execute(
-                "SELECT p.name, ri.qty FROM recipe_ingredients ri JOIN products p ON p.id = ri.product_id "
-                "WHERE ri.recipe_id = ?", (row["id"],))
-        }
+        current = per_portion_now(row["id"])
         conn.execute(
-            "UPDATE recipes SET name = ?, notes = ? WHERE id = ?",
-            (r.get("rename", r["match"]), r["notes"], row["id"]),
+            "UPDATE recipes SET name = ?, notes = ?, servings = ? WHERE id = ?",
+            (r.get("rename", r["match"]), r["notes"], r["servings"], row["id"]),
         )
-        write(row["id"], per_portion(r, current))
+        write(row["id"], r, current)
 
     for r in data["new_recipes"]:
-        if conn.execute("SELECT 1 FROM recipes WHERE name = ?", (r["name"],)).fetchone():
-            continue
-        cur = conn.execute("INSERT INTO recipes(name, kind, notes) VALUES(?, 'meal', ?)", (r["name"], r["notes"]))
-        write(cur.lastrowid, per_portion(r, {}))
+        row = conn.execute("SELECT id FROM recipes WHERE name = ?", (r["name"],)).fetchone()
+        if row:
+            conn.execute("UPDATE recipes SET notes = ?, servings = ? WHERE id = ?",
+                         (r["notes"], r["servings"], row["id"]))
+            rid = row["id"]
+        else:
+            rid = conn.execute(
+                "INSERT INTO recipes(name, kind, notes, servings) VALUES(?, 'meal', ?, ?)",
+                (r["name"], r["notes"], r["servings"]),
+            ).lastrowid
+        write(rid, r, {})
 
     db.set_setting(conn, IMPORT_KEY, "1")
     conn.commit()

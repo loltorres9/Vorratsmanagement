@@ -3,7 +3,7 @@
 {% block content %}
 <header class="head">
   <h1>Rezepte</h1>
-  <p class="sub">Mengen pro Portion. Vorkoch-Rezepte buchen ihr Ergebnis in den Vorrat.</p>
+  <p class="sub">Mengen wie im Rezept, für die angegebenen Portionen. Vorkoch-Rezepte buchen ihr Ergebnis in den Vorrat.</p>
 </header>
 <ul class="recipes">
   {% for r, ings in recipes %}
@@ -11,6 +11,7 @@
     <details>
       <summary>{{ r.name }}{% if r.kind == 'batch' %} <span class="tag">vorkochen</span>{% endif %}{% if not r.active %} <span class="tag">inaktiv</span>{% endif %}</summary>
       {% if r.notes %}<p class="sub">{{ r.notes }}</p>{% endif %}
+      {% if r.kind == 'meal' %}<p class="sub">Menge für {{ fmt_qty(r.servings, 'Portionen') }}</p>{% endif %}
       <ul class="ings">
         {% for i in ings %}<li><span>{{ i.name }}</span><span>{{ fmt_qty(i.qty, i.unit) }}</span></li>{% endfor %}
       </ul>

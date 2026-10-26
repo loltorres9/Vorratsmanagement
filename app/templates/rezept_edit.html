@@ -3,11 +3,14 @@
 {% block content %}
 <header class="head">
   <h1>Rezept bearbeiten</h1>
-  <p class="sub">Mengen pro Portion{% if r.kind == 'batch' %} (Vorkoch-Rezept: pro Batch){% endif %}.</p>
+  <p class="sub">Mengen wie im Rezept{% if r.kind == 'batch' %} (Vorkoch-Rezept: pro Batch){% endif %}.</p>
 </header>
 <form method="post" class="stack">
   <label>Name <input name="name" value="{{ r.name }}" required></label>
   <label>Notiz <input name="notes" value="{{ r.notes }}"></label>
+  {% if r.kind == 'meal' %}
+  <label>Portionen laut Rezept <input name="servings" type="number" min="0.5" step="0.5" value="{{ r.servings }}"></label>
+  {% endif %}
   {% if r.kind == 'batch' %}
   <label>Ergibt (Portionen pro Batch) <input name="yields_qty" type="number" min="0.5" step="0.5" value="{{ r.yields_qty }}"></label>
   {% endif %}

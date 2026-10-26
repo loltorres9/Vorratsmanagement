@@ -28,7 +28,7 @@
     <summary>Zutaten für {{ fmt_qty(today.portions, 'Portion') }}</summary>
     <ul class="ings">
       {% for i in ings %}
-      <li><span>{{ i.name }}</span><span>{{ fmt_qty(i.qty * today.portions, i.unit) }}</span></li>
+      <li><span>{{ i.name }}</span><span>{{ fmt_qty(i.per_portion * today.portions, i.unit) }}</span></li>
       {% endfor %}
     </ul>
   </details>
