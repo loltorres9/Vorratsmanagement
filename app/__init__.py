@@ -39,10 +39,11 @@ def create_app(test_config=None):
         conn = make_conn()
         db.init(conn)
         if seed.ensure_seeded(conn):
-            app.logger.info("Startdaten geladen")
-        if seed.apply_recipe_import(conn):
-            app.logger.info("Rezepte aus dem Rezeptordner übernommen")
-        seed.apply_dampfnudeln_fix(conn)
+            # Nur eine neue, leere Datenbank bekommt die Startdaten samt Rezeptordner.
+            # Eine bestehende Datenbank wird beim Start nie an den Rezepten verändert.
+            app.logger.warning("Leere Datenbank: Startdaten geladen (neue Datenbank, prüfe das Volume unter /data)")
+            seed.apply_recipe_import(conn)
+            seed.apply_dampfnudeln_fix(conn)
         logic.ensure_plan(conn)
         conn.close()
 
