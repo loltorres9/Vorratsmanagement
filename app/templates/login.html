@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Anmelden – Vorrat{% endblock %}
+{% block content %}
+<section class="login">
+  <h1>Vorrat</h1>
+  <form method="post" class="stack">
+    <label for="pw">Passwort</label>
+    <input id="pw" name="password" type="password" autocomplete="current-password" required autofocus>
+    <button class="primary" type="submit">Anmelden</button>
+  </form>
+</section>
+{% endblock %}

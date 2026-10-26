@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="head">
+  <p class="date">{{ weekday_long }}</p>
+</header>
+
+{% if today %}
+<section class="plate {{ today.status }}">
+  <h1>{{ today.recipe_name }}</h1>
+  {% if today.status == 'planned' %}
+    {% if missing %}
+      <p class="warn">Fehlt laut Vorrat: {{ missing|map(attribute='name')|join(', ') }}</p>
+    {% endif %}
+    <div class="row">
+      <form method="post" action="{{ url_for('plan_cook', d=today.date) }}">
+        <button class="primary">Gekocht</button>
+      </form>
+      <form method="post" action="{{ url_for('plan_skip', d=today.date) }}">
+        <button class="quiet">Heute nicht</button>
+      </form>
+    </div>
+  {% elif today.status == 'cooked' %}
+    <p class="done">Gekocht und vom Vorrat abgebucht.</p>
+  {% else %}
+    <p class="done">Übersprungen.</p>
+  {% endif %}
+  <details>
+    <summary>Zutaten für {{ fmt_qty(today.portions, 'Portion') }}</summary>
+    <ul class="ings">
+      {% for i in ings %}
+      <li><span>{{ i.name }}</span><span>{{ fmt_qty(i.qty * today.portions, i.unit) }}</span></li>
+      {% endfor %}
+    </ul>
+  </details>
+</section>
+{% else %}
+<section class="empty">
+  <p>Für heute ist nichts geplant.</p>
+  <a class="button" href="{{ url_for('plan_view') }}">Plan öffnen</a>
+</section>
+{% endif %}
+
+<a class="shopline" href="{{ url_for('shopping') }}">
+  {% if open_count %}{{ open_count }} Sachen auf der Einkaufsliste{% else %}Einkaufsliste ist leer{% endif %}
+</a>
+
+<h2>Die nächsten Tage</h2>
+<ol class="days">
+  {% for d in upcoming %}
+  <li class="{{ d.status }}"><span class="day">{{ day_label(d.date) }}</span><span>{{ d.recipe_name }}</span></li>
+  {% endfor %}
+</ol>
+{% endblock %}

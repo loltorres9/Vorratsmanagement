@@ -1,0 +1,9 @@
+{
+  "name": "Vorrat",
+  "short_name": "Vorrat",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBFBF7",
+  "theme_color": "#1F4E79",
+  "lang": "de"
+}

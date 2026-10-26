@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Rezepte – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>Rezepte</h1>
+  <p class="sub">Mengen pro Portion. Vorkoch-Rezepte buchen ihr Ergebnis in den Vorrat.</p>
+</header>
+<ul class="recipes">
+  {% for r, ings in recipes %}
+  <li>
+    <details>
+      <summary>{{ r.name }}{% if r.kind == 'batch' %} <span class="tag">vorkochen</span>{% endif %}</summary>
+      {% if r.notes %}<p class="sub">{{ r.notes }}</p>{% endif %}
+      <ul class="ings">
+        {% for i in ings %}<li><span>{{ i.name }}</span><span>{{ fmt_qty(i.qty, i.unit) }}</span></li>{% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('recipe_cook', rid=r.id) }}" class="addrow">
+        <input name="portions" type="number" min="0.5" step="0.5" value="1" class="portions"
+               aria-label="{% if r.kind == 'batch' %}Anzahl Batches{% else %}Portionen{% endif %}">
+        <button class="quiet">{% if r.kind == 'batch' %}Gekocht (Batch){% else %}Außer Plan gekocht{% endif %}</button>
+      </form>
+    </details>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}
