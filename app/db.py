@@ -92,6 +92,19 @@ def storage_is_persistent() -> bool:
     return os.path.ismount(data_dir())
 
 
+def storage_info() -> dict:
+    """Was die App über ihren Speicher sieht (für die Warnung und /healthz)."""
+    d = data_dir()
+    return {
+        "data_dir": str(d),
+        "railway_volume_mount_path": os.environ.get("RAILWAY_VOLUME_MOUNT_PATH"),
+        "is_mount": os.path.ismount(d),
+        "on_railway": bool(os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RAILWAY_ENVIRONMENT_NAME")
+                           or os.environ.get("RAILWAY_SERVICE_ID")),
+        "persistent": storage_is_persistent(),
+    }
+
+
 def db_path() -> Path:
     return Path(os.environ.get("DATABASE_PATH", data_dir() / "vorrat.db"))
 
