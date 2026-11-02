@@ -100,29 +100,57 @@ class RecipeEditTest(unittest.TestCase):
 
 
 class RecipeImportTest(unittest.TestCase):
-    def test_import_applies_once(self):
+    def test_import_uses_cookbook_amounts_for_one_portion(self):
         conn = fresh_conn()
         self.assertTrue(seed.apply_recipe_import(conn))
         self.assertFalse(seed.apply_recipe_import(conn))
-        lasagne = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
-        ings = {i["name"]: i["qty"] for i in logic.ingredients(conn, lasagne)}
-        # Mengen wie im Rezept (für 4 Portionen), pro Portion ein Viertel
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne'").fetchone()["id"]
+        ings = {i["name"]: i["qty"] for i in logic.ingredients(conn, rid)}
         self.assertEqual(ings["Hackfleisch"], 500)
         self.assertEqual(ings["Lasagneplatten"], 200)
         self.assertEqual(ings["Milch"], 750)
-        per = {i["name"]: i["per_portion"] for i in logic.ingredients(conn, lasagne)}
-        self.assertEqual(per["Hackfleisch"], 125)
-        self.assertEqual(conn.execute("SELECT servings FROM recipes WHERE id=?", (lasagne,)).fetchone()[0], 4)
-        # Beilage aus dem alten Rezept bleibt pro Portion gleich
-        self.assertEqual(per["Reibekäse"], 40)
-        self.assertIn("Salat", ings)
+        # nur, was im Rezept steht: Salat und Reibekäse stammen nicht aus dem Foto
+        self.assertNotIn("Salat", ings)
+        self.assertNotIn("Reibekäse", ings)
         self.assertNotIn("Passierte Tomaten", ings)
-        self.assertIsNotNone(conn.execute("SELECT 1 FROM recipes WHERE name='Spaghetti Bolognese'").fetchone())
-        self.assertIsNotNone(conn.execute("SELECT 1 FROM recipes WHERE name LIKE 'Spaghetti Carbonara%'").fetchone())
+        per = {i["name"]: i["per_portion"] for i in logic.ingredients(conn, rid)}
+        self.assertEqual(per["Hackfleisch"], 500)
+        self.assertEqual(conn.execute("SELECT MAX(servings) FROM recipes").fetchone()[0], 1)
+
+    def test_import_leaves_unstated_ingredients_out(self):
+        conn = fresh_conn()
+        seed.apply_recipe_import(conn)
+        for name in ("Arme Ritter", "Spaghetti Bolognese", "Spaghetti mit Käsesoße", "Hähnchen-Reis-Pfanne"):
+            rid = conn.execute("SELECT id FROM recipes WHERE name=?", (name,)).fetchone()["id"]
+            names = {i["name"] for i in logic.ingredients(conn, rid)}
+            self.assertFalse(names & {"Toastbrot", "Spaghetti", "Zitrone", "Paprika", "Erbsen & Möhren (TK)"}, name)
+
+    def test_import_structure(self):
+        conn = fresh_conn()
+        seed.apply_recipe_import(conn)
         self.assertEqual(conn.execute("SELECT COUNT(*) FROM rotation").fetchone()[0], 35)
-        # alle Rotationsgerichte haben weiterhin Zutaten
-        for r in conn.execute("SELECT id FROM recipes"):
-            self.assertTrue(logic.ingredients(conn, r["id"]))
+        for n in ("Wecknödel", "Serviettenknödel", "Spaghetti Carbonara"):
+            self.assertIsNotNone(conn.execute("SELECT 1 FROM recipes WHERE name=?", (n,)).fetchone(), n)
+        for r in conn.execute("SELECT id, name FROM recipes"):
+            self.assertTrue(logic.ingredients(conn, r["id"]), r["name"])
+
+    def test_gulasch_meals_back_to_seed_state(self):
+        conn = fresh_conn()
+        seed.apply_recipe_import(conn)
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Gulasch mit Wecknödel & Rotkraut'").fetchone()["id"]
+        self.assertEqual({i["name"] for i in logic.ingredients(conn, rid)},
+                         {"Gulasch-Portion", "Semmelknödel (Kochbeutel)", "Rotkraut (Glas)"})
+
+    def test_import_from_previous_version_names(self):
+        conn = fresh_conn()
+        conn.execute("UPDATE recipes SET name='Hackfleischnudeln mit Paprika' WHERE name LIKE 'Hackfleischnudeln%'")
+        conn.execute("INSERT INTO recipes(name, kind) VALUES('Spaghetti Carbonara (mit Schinken & Sahne)', 'meal')")
+        conn.execute("UPDATE recipes SET servings = 4")
+        conn.commit()
+        seed.apply_recipe_import(conn)
+        self.assertIsNotNone(conn.execute("SELECT 1 FROM recipes WHERE name='Hackfleischnudeln'").fetchone())
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM recipes WHERE name LIKE 'Spaghetti Carbonara%'").fetchone()[0], 1)
+        self.assertEqual(conn.execute("SELECT MAX(servings) FROM recipes").fetchone()[0], 1)
 
 
 class UserEditsProtectedTest(unittest.TestCase):
@@ -134,16 +162,8 @@ class UserEditsProtectedTest(unittest.TestCase):
         seed.apply_recipe_import(conn)
         ings = {i["name"]: i["qty"] for i in logic.ingredients(conn, rid)}
         self.assertEqual(ings, {"Reis": 77})
-        other = conn.execute("SELECT id FROM recipes WHERE name='Waffeln mit Obst & Quark'").fetchone()["id"]
+        other = conn.execute("SELECT id FROM recipes WHERE name='Waffeln'").fetchone()["id"]
         self.assertIn("Mehl", {i["name"] for i in logic.ingredients(conn, other)})
-        self.assertEqual(conn.execute("SELECT servings FROM recipes WHERE id=?", (other,)).fetchone()[0], 3)
-
-    def test_dampfnudeln_fix_skips_edited_recipe(self):
-        conn = fresh_conn()
-        rid = conn.execute("SELECT id FROM recipes WHERE name='Dampfnudeln mit Vanillesoße'").fetchone()["id"]
-        logic.update_recipe(conn, rid, "Dampfnudeln mit Vanillesoße", "", {pid(conn, "Dampfnudeln"): 3})
-        seed.apply_dampfnudeln_fix(conn)
-        self.assertEqual([i["qty"] for i in logic.ingredients(conn, rid)], [3])
 
 
 class ProductEditTest(unittest.TestCase):
@@ -180,18 +200,16 @@ class ProductEditTest(unittest.TestCase):
 
 
 class StartupKeepsDataTest(unittest.TestCase):
-    def test_restart_does_not_touch_existing_recipes(self):
+    def test_restart_does_not_touch_edited_recipes_or_run_import_twice(self):
         path = os.path.join(tempfile.mkdtemp(), "s.db")
         cfg = {"TESTING": True, "DATABASE_PATH": path, "APP_PASSWORD": "x", "START_SYNC": False,
                "SESSION_COOKIE_SECURE": False}
         create_app(cfg)
         conn = db.connect(path)
-        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne'").fetchone()["id"]
         reis = pid(conn, "Reis")
-        conn.execute("UPDATE recipes SET notes='meine Notiz' WHERE id=?", (rid,))
-        conn.execute("DELETE FROM settings WHERE key LIKE 'import_%' OR key LIKE 'fix_%'")  # wie eine ältere Datenbank
-        conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id=?", (rid,))
-        conn.execute("INSERT INTO recipe_ingredients(recipe_id, product_id, qty) VALUES(?,?,?)", (rid, reis, 42))
+        logic.update_recipe(conn, rid, "Lasagne", "meine Notiz", {reis: 42})
+        conn.execute("DELETE FROM settings WHERE key LIKE 'import_%'")  # Merker fehlt, z. B. ältere Datenbank
         conn.commit()
         create_app(cfg)  # Neustart
         self.assertEqual([(i["name"], i["qty"]) for i in logic.ingredients(conn, rid)], [("Reis", 42)])
@@ -236,49 +254,18 @@ class NewIngredientTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             logic.create_product(conn, "Komisch", "Liter", "Vorrat")
 
-    def test_dampfnudeln_are_bought(self):
+
+class PortionTest(unittest.TestCase):
+    def test_cooking_and_needs_use_recipe_amounts(self):
         conn = fresh_conn()
         seed.apply_recipe_import(conn)
-        self.assertTrue(seed.apply_dampfnudeln_fix(conn))
-        self.assertFalse(seed.apply_dampfnudeln_fix(conn))
-        rid = conn.execute("SELECT id FROM recipes WHERE name='Dampfnudeln mit Vanillesoße'").fetchone()["id"]
-        self.assertEqual({i["name"]: i["per_portion"] for i in logic.ingredients(conn, rid)},
-                         {"Dampfnudeln": 2, "Vanillesoße": 200})
-
-
-class ServingsTest(unittest.TestCase):
-    def test_cooking_and_needs_use_per_portion_amounts(self):
-        conn = fresh_conn()
-        seed.apply_recipe_import(conn)
-        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne'").fetchone()["id"]
         hack = pid(conn, "Hackfleisch")
         logic.set_stock(conn, hack, 1000)
         logic.set_plan(conn, MONDAY.isoformat(), rid, 1)
-        req = logic.requirements(conn, MONDAY, 1)
-        self.assertEqual(req[hack], 125)
-        logic.cook_recipe(conn, rid, 2)
-        self.assertEqual(stock(conn, "Hackfleisch"), 750)
-
-    def test_update_servings(self):
-        conn = fresh_conn()
-        rid = conn.execute("SELECT id FROM recipes WHERE kind='meal' ORDER BY id").fetchone()["id"]
-        reis = pid(conn, "Reis")
-        logic.update_recipe(conn, rid, "X", "", {reis: 200}, servings=2)
-        self.assertEqual(logic.ingredients(conn, rid)[0]["per_portion"], 100)
-        with self.assertRaises(ValueError):
-            logic.update_recipe(conn, rid, "X", "", {reis: 200}, servings=0)
-
-    def test_second_import_from_per_portion_data(self):
-        """Datenbank, in der die erste Version des Imports (Mengen pro Portion) lief."""
-        conn = fresh_conn()
-        seed.apply_recipe_import(conn)
-        conn.execute("DELETE FROM settings WHERE key = ?", (seed.IMPORT_KEY,))
-        conn.commit()
-        self.assertTrue(seed.apply_recipe_import(conn))
-        rid = conn.execute("SELECT id FROM recipes WHERE name='Lasagne mit Salat'").fetchone()["id"]
-        per = {i["name"]: i["per_portion"] for i in logic.ingredients(conn, rid)}
-        self.assertEqual(per["Hackfleisch"], 125)
-        self.assertEqual(per["Reibekäse"], 40)
+        self.assertEqual(logic.requirements(conn, MONDAY, 1)[hack], 500)
+        logic.cook_recipe(conn, rid, 1)
+        self.assertEqual(stock(conn, "Hackfleisch"), 500)
 
 
 class NeedsTest(unittest.TestCase):

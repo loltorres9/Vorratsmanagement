@@ -1,5 +1,5 @@
 {
-  "_info": "Rezepte aus dem Rezeptordner (Fotos vom 26.10.2026). ingredients = Mengen laut Rezept für `servings` Portionen (EL/TL/Becher in g/ml umgerechnet). keep = Zutaten des bisherigen Rezepts (pro Portion), die als Beilage bleiben. Salz, Pfeffer, Gewürze, Kräuter werden nicht getrackt.",
+  "_info": "Rezepte aus dem Rezeptordner (Fotos). Mengen stehen genau so da wie im Rezept und gelten für eine Portion. Es kommt nur hinein, was im Rezept steht; Angaben ohne Menge fehlen und werden von Hand ergänzt. Einheiten wie EL, TL, Becher und Ecke sind in g/ml umgerechnet, damit sie zu den Produkten passen.",
   "products": [
     {
       "name": "Lauch",
@@ -63,121 +63,120 @@
       "location": "Vorrat",
       "category": "Brot",
       "pack_size": 6
+    },
+    {
+      "name": "Gemüsebrühe",
+      "unit": "ml",
+      "location": "Vorrat",
+      "category": "Konserven"
     }
   ],
   "recipes": [
     {
-      "match": "Kartoffelsuppe",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet. Zwiebel, Kartoffeln, Lauch, Karotte schälen und klein schneiden; Lauch kurz in Butter andünsten, Karotten und Kartoffeln dazu, mit Brühe aufgießen, 15–20 min kochen, pürieren, Sahne und Schmelzkäse unterrühren.",
+      "names": [
+        "Kartoffelsuppe"
+      ],
+      "name": "Kartoffelsuppe",
+      "notes": "",
       "ingredients": {
         "Kartoffeln": 500,
         "Zwiebeln": 1,
         "Lauch": 1,
         "Karotten": 80,
         "Butter": 30,
-        "Gemüsebrühe (Pulver)": 15,
+        "Gemüsebrühe": 1000,
         "Sahne": 100,
         "Schmelzkäse": 17
       }
     },
     {
-      "match": "Gaisburger Marsch",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet, ohne Karotten. Kartoffeln in Stücken 15–20 min in der Gemüsebrühe weichkochen. Spätzle: 150 g Mehl, 3/4 TL Salz, 1–2 Eier, ca. 75 ml Sprudel – oder fertig kaufen.",
+      "names": [
+        "Gaisburger Marsch"
+      ],
+      "name": "Gaisburger Marsch",
+      "notes": "Kartoffeln in Stücken 15–20 min in der Gemüsebrühe weichkochen. Spätzle: 150 g Mehl, 3/4 TL Salz, 1–2 Eier, ca. 75 ml Sprudel – oder fertig kaufen.",
       "ingredients": {
         "Kartoffeln": 500,
-        "Gemüsebrühe (Pulver)": 11
-      },
-      "keep": [
-        "Suppenfleisch (Rind)",
-        "Spätzle",
-        "Zwiebeln"
-      ]
+        "Gemüsebrühe": 750
+      }
     },
     {
-      "match": "Spaghetti Bolognese mit Gemüse",
-      "rename": "Spaghetti Bolognese",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Hackfleisch anbraten, Rest wie Tomatensoße: passierte Tomaten, 50 ml Wasser, Prise Zucker, Salz, Pfeffer, italienische Kräuter.",
+      "names": [
+        "Spaghetti Bolognese mit Gemüse",
+        "Spaghetti Bolognese"
+      ],
+      "name": "Spaghetti Bolognese",
+      "notes": "Hackfleisch anbraten, Rest wie Tomatensoße.",
       "ingredients": {
         "Hackfleisch": 500,
         "Passierte Tomaten": 500
-      },
-      "keep": [
-        "Spaghetti",
-        "Reibekäse"
-      ]
+      }
     },
     {
-      "match": "Hackfleischnudeln mit Zucchini & Karotte",
-      "rename": "Hackfleischnudeln mit Paprika",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Zwiebel anbraten mit Hackfleisch, Paprika dazu, mit Brühe aufgießen, Nudeln darin garen. Evtl. Tomatenmark und geriebener Käse.",
+      "names": [
+        "Hackfleischnudeln mit Zucchini & Karotte",
+        "Hackfleischnudeln mit Paprika",
+        "Hackfleischnudeln"
+      ],
+      "name": "Hackfleischnudeln",
+      "notes": "",
       "ingredients": {
         "Zwiebeln": 1,
         "Hackfleisch": 500,
         "Paprika": 2,
-        "Gemüsebrühe (Pulver)": 22,
+        "Gemüsebrühe": 1500,
         "Penne": 500
-      },
-      "keep": [
-        "Reibekäse"
-      ]
+      }
     },
     {
-      "match": "Hähnchen-Reis-Pfanne mit Paprika & Erbsen",
-      "servings": 1,
-      "notes": "Aus dem Rezeptordner (Menge selbst bestimmen). Fleisch anbraten, Gemüse dazu und weich dünsten, Gewürze, Tomatenmark und zum Schluss den Reis dazugeben.",
+      "names": [
+        "Hähnchen-Reis-Pfanne mit Paprika & Erbsen",
+        "Hähnchen-Reis-Pfanne"
+      ],
+      "name": "Hähnchen-Reis-Pfanne",
+      "notes": "Menge selbst bestimmen. Tomaten (2–4) und anderes Gemüse nach Wahl, evtl. Tomatenmark.",
       "ingredients": {
         "Reis": 60,
-        "Hähnchenbrust": 200,
-        "Tomaten": 150
-      },
-      "keep": [
-        "Paprika",
-        "Erbsen & Möhren (TK)",
-        "Zwiebeln",
-        "Öl",
-        "Gemüsebrühe (Pulver)"
-      ]
+        "Hähnchenbrust": 200
+      }
     },
     {
-      "match": "Geschnetzeltes mit Nudeln & Brokkoli",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Fleisch anbraten, Pilze dazu, mit Mehl bestäuben, mit Brühe ablöschen, 15 min garen. Speisestärke in die Sahne rühren, in die Soße geben und aufkochen.",
+      "names": [
+        "Geschnetzeltes mit Nudeln & Brokkoli",
+        "Geschnetzeltes"
+      ],
+      "name": "Geschnetzeltes",
+      "notes": "",
       "ingredients": {
         "Geschnetzeltes": 500,
         "Champignons": 250,
         "Mehl": 20,
-        "Gemüsebrühe (Pulver)": 11,
+        "Gemüsebrühe": 750,
         "Sahne": 90,
         "Speisestärke": 30
-      },
-      "keep": [
-        "Bandnudeln",
-        "Brokkoli (TK)"
-      ]
+      }
     },
     {
-      "match": "Nudelauflauf mit Brokkoli",
-      "servings": 2,
-      "notes": "Aus dem Rezeptordner, für 2 Portionen gerechnet. Saure Sahne mit Gewürzen und Ei verrühren, Nudeln und Gemüse dazu, in gefettete Form, 5 min vor Ende mit Käse bestreuen. 200 °C, 45 min.",
+      "names": [
+        "Nudelauflauf mit Brokkoli",
+        "Nudelauflauf"
+      ],
+      "name": "Nudelauflauf",
+      "notes": "Gemüse nach Belieben. 5 Minuten vor Ende mit geriebenem Käse bestreuen. 200 °C, 45 Minuten.",
       "ingredients": {
         "Penne": 250,
         "Paprika": 1,
         "Eier": 1,
         "Saure Sahne": 200
-      },
-      "keep": [
-        "Brokkoli (TK)",
-        "Reibekäse"
-      ]
+      }
     },
     {
-      "match": "Lasagne mit Salat",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Hackfleischsoße und Béchamelsoße schichten, Käse zum Schluss darüber. 180 °C, 40–45 min.",
+      "names": [
+        "Lasagne mit Salat",
+        "Lasagne"
+      ],
+      "name": "Lasagne",
+      "notes": "5 Minuten vor Ende der Garzeit geriebenen Käse über die Lasagne streuen. 180 °C, 40–45 min.",
       "ingredients": {
         "Lasagneplatten": 200,
         "Zwiebeln": 1,
@@ -188,46 +187,44 @@
         "Mehl": 60,
         "Milch": 750,
         "Gemüsebrühe (Pulver)": 3
-      },
-      "keep": [
-        "Reibekäse",
-        "Salat"
-      ]
+      }
     },
     {
-      "match": "Waffeln mit Obst & Quark",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet. Eiweiß zu Schnee schlagen, Teig aus Mehl, Milch, Eigelb, Salz, Öl und Backpulver rühren, Eischnee unterheben.",
+      "names": [
+        "Waffeln mit Obst & Quark",
+        "Waffeln"
+      ],
+      "name": "Waffeln",
+      "notes": "",
       "ingredients": {
         "Mehl": 250,
         "Milch": 500,
         "Eier": 2,
         "Öl": 50,
         "Backpulver": 0.2
-      },
-      "keep": [
-        "Quark",
-        "Äpfel"
-      ]
+      }
     },
     {
-      "match": "Milchreis mit Beeren",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet. Milch, Milchreis, Zucker und Butter zum Brei kochen (großer Topf, Herd zurück- oder ausschalten), bis er sich vom Topfboden löst.",
+      "names": [
+        "Milchreis mit Beeren",
+        "Milchreis"
+      ],
+      "name": "Milchreis",
+      "notes": "",
       "ingredients": {
         "Milch": 1000,
         "Milchreis": 250,
         "Zucker": 40,
         "Butter": 20
-      },
-      "keep": [
-        "Beeren (TK)"
-      ]
+      }
     },
     {
-      "match": "Milchreisauflauf mit Obst",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Brei kochen, Eigelb und Mandeln unterrühren, Eischnee unterheben, in gefettete Form füllen, nach Belieben Obst dazwischen schichten. 200 °C, 45–60 min.",
+      "names": [
+        "Milchreisauflauf mit Obst",
+        "Milchreisauflauf"
+      ],
+      "name": "Milchreisauflauf",
+      "notes": "Nach Belieben Obst dazwischen schichten. 200 °C, 45–60 Minuten.",
       "ingredients": {
         "Milch": 1000,
         "Milchreis": 250,
@@ -235,75 +232,69 @@
         "Butter": 30,
         "Eier": 2,
         "Gemahlene Mandeln": 30
-      },
-      "keep": [
-        "Äpfel"
-      ]
+      }
     },
     {
-      "match": "Grießschnitten mit Kompott",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Milch, Butter und Salz aufkochen, Grieß einrieseln lassen, dicken Brei kochen, Eier unterrühren, erkalten lassen, Schnitten in verquirltem Ei wenden und in der Pfanne ausbacken.",
+      "names": [
+        "Grießschnitten mit Kompott",
+        "Grießschnitten"
+      ],
+      "name": "Grießschnitten",
+      "notes": "Evtl. 1 Ei zum Anbraten.",
       "ingredients": {
         "Milch": 1000,
         "Grieß": 200,
         "Butter": 20,
         "Eier": 2
-      },
-      "keep": [
-        "Kompott (Glas)"
-      ]
+      }
     },
     {
-      "match": "Kaiserschmarrn mit Apfelmus",
-      "servings": 2,
-      "notes": "Aus dem Rezeptordner, für 2 Portionen gerechnet. Eier trennen, Eiweiß zu Schnee schlagen, Teig aus Milch, Mehl, Salz und Eigelb, Butter und Eischnee unterheben, in der Pfanne goldbraun backen und zerreißen.",
+      "names": [
+        "Kaiserschmarrn mit Apfelmus",
+        "Kaiserschmarrn"
+      ],
+      "name": "Kaiserschmarrn",
+      "notes": "",
       "ingredients": {
-        "Milch": 125,
+        "Milch": 250,
         "Mehl": 120,
         "Eier": 5,
         "Butter": 40
-      },
-      "keep": [
-        "Apfelmus",
-        "Puderzucker"
-      ]
+      }
     },
     {
-      "match": "Apfelküchle",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet. Teig aus Mehl, Milch, Eigelb, Salz, Öl, Eischnee; Apfelscheiben eintauchen und in heißem Fett ausbacken.",
+      "names": [
+        "Apfelküchle"
+      ],
+      "name": "Apfelküchle",
+      "notes": "In (viel) heißem Fett in der Pfanne ausbacken.",
       "ingredients": {
         "Äpfel": 4,
         "Mehl": 250,
         "Milch": 250,
-        "Eier": 3
-      },
-      "keep": [
-        "Öl"
-      ]
+        "Eier": 3,
+        "Öl": 15
+      }
     },
     {
-      "match": "Arme Ritter mit Beeren",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner, für 4 Portionen gerechnet. Milch, Ei, Zucker und Zitronenschale verquirlen, Toastbrot darin wenden, in Semmelbröseln drehen, in Fett hellbraun ausbacken.",
+      "names": [
+        "Arme Ritter mit Beeren",
+        "Arme Ritter"
+      ],
+      "name": "Arme Ritter",
+      "notes": "Toastbrot, Zitronenschale und Semmelbrösel ohne Mengenangabe. In (viel) Fett hellbraun herausbacken.",
       "ingredients": {
         "Milch": 400,
         "Eier": 1,
-        "Zucker": 15,
-        "Zitrone": 0.25,
-        "Paniermehl": 60
-      },
-      "keep": [
-        "Toastbrot",
-        "Butter",
-        "Beeren (TK)"
-      ]
+        "Zucker": 15
+      }
     },
     {
-      "match": "Apfelauflauf",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet. Weckla und Äpfel abwechselnd in gefettete Form schichten, Milch, Sahne, Eier und Zucker darüber, Butterflöckchen. 180 °C, gut eine halbe Stunde.",
+      "names": [
+        "Apfelauflauf"
+      ],
+      "name": "Apfelauflauf",
+      "notes": "Zucker nach Bedarf. 180 °C, eine gute halbe Stunde (eher länger).",
       "ingredients": {
         "Äpfel": 2,
         "Brötchen (altbacken)": 2,
@@ -311,66 +302,43 @@
         "Sahne": 200,
         "Eier": 3,
         "Butter": 40
-      },
-      "keep": [
-        "Zucker"
-      ]
-    },
-    {
-      "match": "Gulasch mit Wecknödel & Rotkraut",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner (Wecknödel für 4 Portionen gerechnet). Weckla in warmem Wasser einweichen, ausdrücken, mit Ei, Mehl und Gewürzen zum Teig mischen, Knödel formen, 10 min zugedeckt in Salzwasser ziehen, 5 min offen kochen.",
-      "ingredients": {
-        "Brötchen (altbacken)": 8,
-        "Eier": 1,
-        "Mehl": 20
-      },
-      "keep": [
-        "Gulasch-Portion",
-        "Rotkraut (Glas)"
-      ],
-      "per_portion": {
-        "Gulasch-Portion": 1
-      }
-    },
-    {
-      "match": "Gulasch mit Serviettenknödel & Rotkraut",
-      "servings": 4,
-      "notes": "Aus dem Rezeptordner (Serviettenknödel für 4 Portionen gerechnet). Quark, Eier und Salz verrühren, Semmelbrösel und Öl dazu, in längliche Form bringen, in nasses Tuch einrollen, 20 min ziehen lassen, 30 min in Salzwasser kochen.",
-      "ingredients": {
-        "Paniermehl": 200,
-        "Öl": 20,
-        "Eier": 2,
-        "Quark": 250
-      },
-      "keep": [
-        "Gulasch-Portion",
-        "Rotkraut (Glas)"
-      ],
-      "per_portion": {
-        "Gulasch-Portion": 1
       }
     }
   ],
   "new_recipes": [
     {
-      "name": "Spaghetti mit Käsesoße",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen gerechnet. Butter erhitzen, Mehl hellgelb anschwitzen, mit heißer Brühe ablöschen, Schmelzkäse darin schmelzen lassen.",
+      "name": "Wecknödel",
+      "notes": "Petersilie und Semmelbrösel ohne Mengenangabe.",
       "ingredients": {
-        "Spaghetti": 375,
+        "Brötchen (altbacken)": 8,
+        "Eier": 1,
+        "Mehl": 20
+      }
+    },
+    {
+      "name": "Serviettenknödel",
+      "notes": "Menge für eine Serviette.",
+      "ingredients": {
+        "Paniermehl": 200,
+        "Öl": 20,
+        "Eier": 2,
+        "Quark": 250
+      }
+    },
+    {
+      "name": "Spaghetti mit Käsesoße",
+      "notes": "Soße für Spaghetti.",
+      "ingredients": {
         "Butter": 40,
         "Mehl": 40,
-        "Gemüsebrühe (Pulver)": 8,
+        "Gemüsebrühe": 500,
         "Schmelzkäse": 100
       }
     },
     {
-      "name": "Spaghetti Carbonara (mit Schinken & Sahne)",
-      "servings": 3,
-      "notes": "Aus dem Rezeptordner, für 3 Portionen. Zwiebel andünsten, Schinken und Mehl dazu, mit Wein oder Wasser ablöschen, saure und süße Sahne und Brühe dazu.",
+      "name": "Spaghetti Carbonara",
+      "notes": "„Carbonara“, für 3 Personen. Weißwein oder Wasser (125 ml) ohne Zuordnung.",
       "ingredients": {
-        "Spaghetti": 375,
         "Zwiebeln": 1,
         "Schinken": 200,
         "Mehl": 10,
@@ -379,5 +347,12 @@
         "Gemüsebrühe (Pulver)": 3
       }
     }
+  ],
+  "renamed": {
+    "Spaghetti Carbonara (mit Schinken & Sahne)": "Spaghetti Carbonara"
+  },
+  "restore_from_seed": [
+    "Gulasch mit Wecknödel & Rotkraut",
+    "Gulasch mit Serviettenknödel & Rotkraut"
   ]
 }
