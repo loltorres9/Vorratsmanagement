@@ -44,11 +44,10 @@ def create_app(test_config=None):
         conn = make_conn()
         db.init(conn)
         if seed.ensure_seeded(conn):
-            # Nur eine neue, leere Datenbank bekommt die Startdaten samt Rezeptordner.
-            # Eine bestehende Datenbank wird beim Start nie an den Rezepten verändert.
             app.logger.warning("Leere Datenbank: Startdaten geladen (neue Datenbank, prüfe das Volume unter /data)")
-            seed.apply_recipe_import(conn)
-            seed.apply_dampfnudeln_fix(conn)
+        # Einmalig (Merker in settings); in der App bearbeitete Rezepte bleiben unberührt.
+        if seed.apply_recipe_import(conn):
+            app.logger.info("Rezepte aus dem Rezeptordner übernommen")
         logic.ensure_plan(conn)
         conn.close()
 
@@ -399,11 +398,9 @@ def create_app(test_config=None):
                         )
                     ings[int(new_pid)] = float((request.form.get("new_qty") or "0").replace(",", "."))
                 yq = request.form.get("yields_qty")
-                sv = request.form.get("servings")
                 logic.update_recipe(
                     conn, rid, request.form.get("name"), request.form.get("notes"), ings,
                     float(yq.replace(",", ".")) if yq else None,
-                    float(sv.replace(",", ".")) if sv else None,
                 )
                 flash("Rezept gespeichert.")
                 return redirect(url_for("recipes"))

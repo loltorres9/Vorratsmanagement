@@ -26,7 +26,7 @@ app/db.py           Schema (SCHEMA), connect(), Settings-Helfer
 app/logic.py        Kernlogik: Plan, Bedarf, Einkaufsliste, Bestand
 app/keep_sync.py    Google-Keep-Abgleich (sync_list ist rein und testbar)
 app/seed.py         lädt seed/seed.json in eine leere DB
-seed/rezeptordner.json  Rezepte aus dem Rezeptordner (Fotos); wird einmalig per seed.apply_recipe_import übernommen
+seed/rezeptordner.json  Rezepte aus dem Rezeptordner (Fotos), Mengen wie im Buch; einmalig per seed.apply_recipe_import (überspringt `user_edited`-Rezepte)
 seed/seed.json      Produkte, 35 Rezepte (pro 1 Portion, servings = 1), 5-Wochen-Rotation, Gulasch-Batch
 app/templates/      Jinja-Templates (base, index, plan, einkauf, vorrat, rezepte, zutaten, login)
 app/static/         style.css, manifest.json
@@ -36,7 +36,7 @@ tests/test_app.py   unittest (läuft auch mit pytest)
 ## Datenmodell (Kurzfassung)
 - `products`: name, unit (g/ml/Stk/Portion/Tasse/EL/TL/Packung; im Tab „Zutaten“ änderbar, mit Umrechnung), location (Vorrat/Kühlschrank/TK), category,
   min_stock, pack_size, price, **stock**, made_by_recipe_id (selbstgemacht, z. B. Gulasch-Portion)
-- `recipes` (kind `meal` | `batch`, `active` 0/1 – inaktive Gerichte sind nicht in der Rotation), `recipe_ingredients` (Menge **wie im Rezept**, gilt für `recipes.servings` Portionen; Batch: pro Batch). Pro Portion = `qty / servings` (`logic.ingredients()` liefert `per_portion`)
+- `recipes` (kind `meal` | `batch`, `active` 0/1 – inaktive Gerichte sind nicht in der Rotation), `recipe_ingredients` (Menge **wie im Rezept** = eine Portion, `recipes.servings` ist immer 1; Batch: pro Batch; im Plan multipliziert `meal_plan.portions`). Rezepte aus Fotos: nur Angaben aus dem Rezept, nichts dazu interpretieren – fehlende Mengen bleiben leer, der Nutzer ergänzt sie
 - `rotation(week, weekday, recipe_id)` – 5-Wochen-Rotation, Woche 1 beginnt bei `rotation_start`
 - `meal_plan(date, recipe_id, portions, status planned|cooked|skipped)`
 - `shopping_items(source auto|manual|keep, status open|bought|dismissed, keep_item_id, packs)`
