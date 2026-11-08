@@ -9,7 +9,7 @@ import io
 
 from . import logic
 
-COLUMNS = ["rezept", "notiz", "zutat", "menge", "einheit", "lagerort", "kategorie", "packungsgroesse"]
+COLUMNS = ["rezept", "notiz", "zutat", "menge", "einheit", "lagerort", "kategorie", "packungsgroesse", "aktiv"]
 REQUIRED = ("rezept", "zutat", "menge")
 
 ALIASES = {
@@ -21,7 +21,10 @@ ALIASES = {
     "lagerort": "lagerort", "lager": "lagerort",
     "kategorie": "kategorie",
     "packungsgroesse": "packungsgroesse", "packungsgröße": "packungsgroesse", "packung": "packungsgroesse",
+    "aktiv": "aktiv", "active": "aktiv",
 }
+YES = {"ja", "j", "1", "true", "yes", "aktiv", "x"}
+NO = {"nein", "n", "0", "false", "no", "inaktiv"}
 UNIT_ALIASES = {"stück": "Stk", "stueck": "Stk", "st": "Stk", "st.": "Stk", "stk.": "Stk",
                 "pck": "Packung", "pkg": "Packung", "päckchen": "Packung", "packung(en)": "Packung",
                 "el": "EL", "tl": "TL", "portionen": "Portion", "tassen": "Tasse"}
@@ -31,12 +34,12 @@ LOCATION_ALIASES = {"kuehlschrank": "Kühlschrank", "kühl": "Kühlschrank", "ku
                     "gefrierfach": "TK", "vorratsschrank": "Vorrat", "schrank": "Vorrat"}
 
 EXAMPLE = [
-    ["Spaghetti Bolognese", "Hack anbraten, Soße 20 Minuten köcheln lassen.", "Spaghetti", "125", "g", "Vorrat", "Nudeln", "500"],
-    ["Spaghetti Bolognese", "", "Rinderhack", "150", "g", "Kühlschrank", "Fleisch", "500"],
-    ["Spaghetti Bolognese", "", "Passierte Tomaten", "200", "g", "Vorrat", "Konserven", "500"],
-    ["Spaghetti Bolognese", "", "Zwiebel", "1", "Stk", "Vorrat", "Obst & Gemüse", ""],
-    ["Gemüsepfanne mit Reis", "", "Reis", "80", "g", "Vorrat", "Trockenwaren", "1000"],
-    ["Gemüsepfanne mit Reis", "", "Paprika", "1", "Stk", "Kühlschrank", "Obst & Gemüse", ""],
+    ["Spaghetti Bolognese", "Hack anbraten, Soße 20 Minuten köcheln lassen.", "Spaghetti", "125", "g", "Vorrat", "Nudeln", "500", "ja"],
+    ["Spaghetti Bolognese", "", "Rinderhack", "150", "g", "Kühlschrank", "Fleisch", "500", ""],
+    ["Spaghetti Bolognese", "", "Passierte Tomaten", "200", "g", "Vorrat", "Konserven", "500", ""],
+    ["Spaghetti Bolognese", "", "Zwiebel", "1", "Stk", "Vorrat", "Obst & Gemüse", "", ""],
+    ["Gemüsepfanne mit Reis", "", "Reis", "80", "g", "Vorrat", "Trockenwaren", "1000", "nein"],
+    ["Gemüsepfanne mit Reis", "", "Paprika", "1", "Stk", "Kühlschrank", "Obst & Gemüse", "", ""],
 ]
 
 
@@ -75,6 +78,7 @@ SPALTEN
 - lagerort (nur bei neuen Zutaten): {places}. Leer = Vorrat. Frisches (Fleisch, Gemüse, Milch) = Kühlschrank, Tiefgefrorenes = TK.
 - kategorie (optional): Abteilung im Supermarkt, z. B. Nudeln, Fleisch, Molkerei, Obst & Gemüse, Konserven, Backen, Tiefkühl.
 - packungsgroesse (optional): übliche Packungsgröße in derselben Einheit wie menge (z. B. 500 für 500 g). Daraus rundet die App beim Einkauf auf ganze Packungen.
+- aktiv (optional, pro Rezept): ja = kommt in die Rotation, nein = wird nur angelegt. Leer = ja. Nur in der ersten Zeile des Rezepts nötig.
 
 REGELN
 - Salz, Pfeffer und Gewürze weglassen (die App verfolgt sie nicht).
@@ -166,13 +170,20 @@ def parse(text: str):
         if not rname:
             errors.append(f"Zeile {n}: Der Rezeptname fehlt.")
             continue
-        rec = recipes.setdefault(rname.casefold(), {"name": rname, "notes": "", "ingredients": {}})
+        rec = recipes.setdefault(rname.casefold(), {"name": rname, "notes": "", "ingredients": {}, "active": None})
         if cells.get("notiz") and not rec["notes"]:
             rec["notes"] = cells["notiz"]
 
         def fail(msg):
             errors.append(f"Zeile {n} ({rname}): {msg}")
             bad.add(rname.casefold())
+
+        flag = cells.get("aktiv", "").lower()
+        if flag and rec["active"] is None:
+            if flag in YES or flag in NO:
+                rec["active"] = flag in YES
+            else:
+                fail(f"„aktiv“ muss ja oder nein sein, nicht „{cells['aktiv']}“.")
 
         zutat = cells.get("zutat", "")
         qty = _number(cells.get("menge", ""))
@@ -204,6 +215,7 @@ def parse(text: str):
     valid = [r for k, r in recipes.items() if k not in bad]
     for r in valid:
         r["ingredients"] = list(r["ingredients"].values())
+        r["active"] = True if r["active"] is None else r["active"]
     for k in bad:
         errors.append(f"„{recipes[k]['name']}“ wurde nicht importiert.")
     if not recipes:
@@ -212,6 +224,19 @@ def parse(text: str):
 
 
 # ---------------------------------------------------------------------- Importieren
+
+def problems(conn, rec) -> list:
+    """Was gegen den Import dieses Rezepts spricht (Einheit passt nicht zu einer vorhandenen Zutat …)."""
+    out = []
+    for ing in rec["ingredients"]:
+        p = logic.find_product(conn, ing["name"])
+        if p and ing["unit"] and p["unit"] != ing["unit"]:
+            out.append(f"„{p['name']}“ wird in {p['unit']} geführt, nicht in {ing['unit']}. "
+                       "Einheit in der Datei anpassen oder in „Zutaten“ ändern.")
+        elif not p and not ing["unit"]:
+            out.append(f"„{ing['name']}“ ist neu und braucht eine Einheit.")
+    return out
+
 
 def apply(conn, recipes, overwrite=False) -> dict:
     """Legt Rezepte (und neue Zutaten) an. Vorhandene Rezepte gleichen Namens werden übersprungen
@@ -223,16 +248,9 @@ def apply(conn, recipes, overwrite=False) -> dict:
             res["skipped"].append(rec["name"])
             continue
         # erst prüfen, dann anlegen: ein Rezept entsteht ganz oder gar nicht
-        problems = []
-        for ing in rec["ingredients"]:
-            p = logic.find_product(conn, ing["name"])
-            if p and ing["unit"] and p["unit"] != ing["unit"]:
-                problems.append(f"„{p['name']}“ wird in {p['unit']} geführt, nicht in {ing['unit']}. "
-                                "Einheit in der Datei anpassen oder in „Zutaten“ ändern.")
-            elif not p and not ing["unit"]:
-                problems.append(f"„{ing['name']}“ ist neu und braucht eine Einheit.")
-        if problems:
-            res["errors"] += [f"{rec['name']}: {m}" for m in problems] + [f"„{rec['name']}“ wurde nicht importiert."]
+        probs = problems(conn, rec)
+        if probs:
+            res["errors"] += [f"{rec['name']}: {m}" for m in probs] + [f"„{rec['name']}“ wurde nicht importiert."]
             continue
         ings = {}
         for ing in rec["ingredients"]:
@@ -255,6 +273,7 @@ def apply(conn, recipes, overwrite=False) -> dict:
                 conn.execute("DELETE FROM recipes WHERE id = ?", (rid,))
             res["errors"].append(f"{rec['name']}: {e}")
             continue
+        logic.set_recipe_active(conn, rid, rec.get("active", True))
         res["updated" if existing else "created"].append(rec["name"])
     conn.commit()
     return res

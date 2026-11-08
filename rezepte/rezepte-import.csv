@@ -1,0 +1,315 @@
+﻿rezept;notiz;zutat;menge;einheit;lagerort;kategorie;packungsgroesse;aktiv
+Dampfnudeln;Teig auch für Hefezopf. Teig: 1 Prise Salz. Zum Dämpfen: 125 ml Milch, 1 EL Zucker, etwas Butter (Zucker und Milch sind in den Mengen enthalten).;Mehl;500;g;Vorrat;Backen;1000;ja
+Dampfnudeln;;Trockenhefe;1;Packung;Vorrat;Backen;;
+Dampfnudeln;;Zucker;75;g;Vorrat;Backen;1000;
+Dampfnudeln;;Milch;375;ml;Kühlschrank;Molkerei;1000;
+Dampfnudeln;;Butter;80;g;Kühlschrank;Molkerei;250;
+Dampfnudeln;;Eier;1;Stk;Kühlschrank;Molkerei;10;
+Grießschnitten;1 Prise Salz. Evtl. 1 Ei zum Anbraten.;Milch;1000;ml;Kühlschrank;Molkerei;1000;nein
+Grießschnitten;;Grieß;200;g;Vorrat;Trockenwaren;500;
+Grießschnitten;;Butter;20;g;Kühlschrank;Molkerei;250;
+Grießschnitten;;Eier;2;Stk;Kühlschrank;Molkerei;10;
+Kaiserschmarrn;1 Prise Salz. Butter: 8 TL flüssig (= 40 g).;Milch;250;ml;Kühlschrank;Molkerei;1000;ja
+Kaiserschmarrn;;Mehl;120;g;Vorrat;Backen;1000;
+Kaiserschmarrn;;Eier;5;Stk;Kühlschrank;Molkerei;10;
+Kaiserschmarrn;;Butter;40;g;Kühlschrank;Molkerei;250;
+Apfelauflauf;Zucker nach Bedarf.;Äpfel;2;Stk;Vorrat;Obst & Gemüse;6;ja
+Apfelauflauf;;Brötchen (altbacken);2;Stk;Vorrat;Brot;6;
+Apfelauflauf;;Milch;250;ml;Kühlschrank;Molkerei;1000;
+Apfelauflauf;;Sahne;200;ml;Kühlschrank;Molkerei;200;
+Apfelauflauf;;Eier;3;Stk;Kühlschrank;Molkerei;10;
+Apfelauflauf;;Butter;40;g;Kühlschrank;Molkerei;250;
+Apfelküchle;1 Prise Salz. Eier getrennt.;Äpfel;4;Stk;Vorrat;Obst & Gemüse;6;nein
+Apfelküchle;;Mehl;250;g;Vorrat;Backen;1000;
+Apfelküchle;;Milch;250;ml;Kühlschrank;Molkerei;1000;
+Apfelküchle;;Eier;3;Stk;Kühlschrank;Molkerei;10;
+Apfelküchle;;Öl;15;ml;Vorrat;Öl & Essig;1000;
+Arme Ritter;Toastbrot: 1 Packung (20 Scheiben). Etwas Zitronenschale. Toastbrot in der Eiermilch wenden, ausdrücken, in Semmelbröseln drehen und in (viel) Fett hellbraun ausbacken.;Toastbrot;20;Stk;Vorrat;Brot;20;ja
+Arme Ritter;;Milch;400;ml;Kühlschrank;Molkerei;1000;
+Arme Ritter;;Eier;1;Stk;Kühlschrank;Molkerei;10;
+Arme Ritter;;Zucker;15;g;Vorrat;Backen;1000;
+Pfannkuchen;;Mehl;400;g;Vorrat;Backen;1000;ja
+Pfannkuchen;;Eier;4;Stk;Kühlschrank;Molkerei;10;
+Pfannkuchen;;Salz;0,5;TL;Vorrat;Gewürze;;
+Pfannkuchen;;Zucker;10;g;Vorrat;Backen;1000;
+Pfannkuchen;;Milch;500;ml;Kühlschrank;Molkerei;1000;
+Pfitzauf;Salz (ohne Menge).;Mehl;250;g;Vorrat;Backen;1000;ja
+Pfitzauf;;Milch;500;ml;Kühlschrank;Molkerei;1000;
+Pfitzauf;;Eier;4;Stk;Kühlschrank;Molkerei;10;
+Pfitzauf;;Öl;30;ml;Vorrat;Öl & Essig;1000;
+Waffeln;1 Prise Salz. Eier getrennt.;Mehl;250;g;Vorrat;Backen;1000;ja
+Waffeln;;Milch;500;ml;Kühlschrank;Molkerei;1000;
+Waffeln;;Eier;2;Stk;Kühlschrank;Molkerei;10;
+Waffeln;;Öl;50;ml;Vorrat;Öl & Essig;1000;
+Waffeln;;Backpulver (TL);1;TL;Vorrat;Backen;;
+Geschnetzeltes;Fleisch nach Verfügbarkeit: 1 Schwein, 2 Hähnchen oder 3 Pute. Salz, Pfeffer und Paprika zum Abschmecken.;Geschnetzeltes;500;g;Kühlschrank;Fleisch;400;ja
+Geschnetzeltes;;Champignons;250;g;Kühlschrank;Obst & Gemüse;250;
+Geschnetzeltes;;Mehl;30;g;Vorrat;Backen;1000;
+Geschnetzeltes;;Gemüsebrühe;750;ml;Vorrat;Konserven;;
+Geschnetzeltes;;Sahne;90;ml;Kühlschrank;Molkerei;200;
+Geschnetzeltes;;Speisestärke;45;g;Vorrat;Backen;400;
+Hackfleischnudeln;Salz, Pfeffer, Curry oder Paprika. Evtl. Tomatenmark und geriebener Käse (Parmesan).;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;ja
+Hackfleischnudeln;;Hackfleisch;500;g;TK;Fleisch;500;
+Hackfleischnudeln;;Paprika;2;Stk;Kühlschrank;Obst & Gemüse;1;
+Hackfleischnudeln;;Gemüsebrühe;1500;ml;Vorrat;Konserven;;
+Hackfleischnudeln;;Nudeln;500;g;Vorrat;Nudeln;500;
+Hähnchen-Reis-Pfanne;Menge selbst bestimmen. 2-4 Tomaten und anderes Gemüse nach Wahl (hier 4 Tomaten). Evtl. Tomatenmark. Gewürze nach Wahl: Salz, Pfeffer, Paprika oder Curry.;Reis;60;g;Vorrat;Trockenwaren;1000;ja
+Hähnchen-Reis-Pfanne;;Hähnchengeschnetzeltes;200;g;Kühlschrank;Fleisch;;
+Hähnchen-Reis-Pfanne;;Tomate;4;Stk;Kühlschrank;Obst & Gemüse;;
+Milchreis;;Milch;1000;ml;Kühlschrank;Molkerei;1000;ja
+Milchreis;;Milchreis;250;g;Vorrat;Trockenwaren;500;
+Milchreis;;Zucker;40;g;Vorrat;Backen;1000;
+Milchreis;;Butter;20;g;Kühlschrank;Molkerei;250;
+Milchreisauflauf;Obst nach Belieben dazwischen schichten. Mandeln: 20-40 g (hier 40 g). Butter: 2 EL (= 30 g). Eier getrennt.;Milch;1000;ml;Kühlschrank;Molkerei;1000;ja
+Milchreisauflauf;;Milchreis;250;g;Vorrat;Trockenwaren;500;
+Milchreisauflauf;;Zucker;100;g;Vorrat;Backen;1000;
+Milchreisauflauf;;Butter;30;g;Kühlschrank;Molkerei;250;
+Milchreisauflauf;;Eier;2;Stk;Kühlschrank;Molkerei;10;
+Milchreisauflauf;;Gemahlene Mandeln;40;g;Vorrat;Backen;200;
+Käsesoße (Spaghetti);Soße für Spaghetti. Gemüsebrühe heiß. Spaghetti selbst stehen nicht im Buch.;Butter;40;g;Kühlschrank;Molkerei;250;ja
+Käsesoße (Spaghetti);;Mehl;40;g;Vorrat;Backen;1000;
+Käsesoße (Spaghetti);;Gemüsebrühe;500;ml;Vorrat;Konserven;;
+Käsesoße (Spaghetti);;Schmelzkäse;100;g;Kühlschrank;Milch & Käse;200;
+Tomatensoße (Spaghetti);Soße für Spaghetti. Dazu 50 ml Wasser, 1 Prise Zucker, Salz, Pfeffer, italienische Kräuter. 1 Päckchen = 500 g.;Passierte Tomaten;500;g;Vorrat;Konserven;500;nein
+Bolognese (Spaghetti);Hackfleisch anbraten, Rest wie bei Tomatensoße (50 ml Wasser, 1 Prise Zucker, Salz, Pfeffer, italienische Kräuter).;Hackfleisch;500;g;TK;Fleisch;500;ja
+Bolognese (Spaghetti);;Passierte Tomaten;500;g;Vorrat;Konserven;500;
+Carbonara (Spaghetti);Im Buch für 3 Personen. 125 ml Weißwein oder Wasser. 1 Prise Salz und Pfeffer. Becher = 200 ml.;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;nein
+Carbonara (Spaghetti);;Schinken;200;g;Kühlschrank;Fleisch;200;
+Carbonara (Spaghetti);;Mehl;15;g;Vorrat;Backen;1000;
+Carbonara (Spaghetti);;Saure Sahne;200;ml;Kühlschrank;Milch & Käse;200;
+Carbonara (Spaghetti);;Sahne;200;ml;Kühlschrank;Molkerei;200;
+Carbonara (Spaghetti);;Gemüsebrühe (Pulver);5;g;Vorrat;Gewürze;150;
+Gaisburger Marsch;Keine Karotten. Spätzle: ca. 75 ml Sprudel oder Wasser, oder fertig kaufen. Eier: 1-2 (hier 2).;Gemüsebrühe;750;ml;Vorrat;Konserven;;nein
+Gaisburger Marsch;;Kartoffeln;500;g;Vorrat;Obst & Gemüse;2000;
+Gaisburger Marsch;;Mehl;150;g;Vorrat;Backen;1000;
+Gaisburger Marsch;;Salz;0,75;TL;Vorrat;Gewürze;;
+Gaisburger Marsch;;Eier;2;Stk;Kühlschrank;Molkerei;10;
+Kartoffelsuppe;Salz, Pfeffer, Majoran. Süße Sahne: 1/2 Becher (= 100 ml). 1 Ecke Schmelzkäse.;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;ja
+Kartoffelsuppe;;Kartoffeln;500;g;Vorrat;Obst & Gemüse;2000;
+Kartoffelsuppe;;Lauch;1;Stk;Kühlschrank;Gemüse;1;
+Kartoffelsuppe;;Karotte;1;Stk;Kühlschrank;Obst & Gemüse;;
+Kartoffelsuppe;;Butter;30;g;Kühlschrank;Molkerei;250;
+Kartoffelsuppe;;Gemüsebrühe;1000;ml;Vorrat;Konserven;;
+Kartoffelsuppe;;Sahne;100;ml;Kühlschrank;Molkerei;200;
+Kartoffelsuppe;;Schmelzkäse-Ecke;1;Stk;Kühlschrank;Milch & Käse;;
+Lasagne;Hackfleischsoße: 50 ml Wasser, Salz, Pfeffer, italienische Kräuter. Béchamel: 60 g Butter, 60 g Mehl, 3/4 L Milch, 1 TL Gemüsebrühpulver. 5 Min. vor Ende geriebener Käse darüber. 180 °C 40-45 Min.;Lasagneplatten;200;g;Vorrat;Nudeln;250;ja
+Lasagne;;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;
+Lasagne;;Hackfleisch;500;g;TK;Fleisch;500;
+Lasagne;;Gehackte Tomaten (Dose);1;Stk;Vorrat;Konserven;1;
+Lasagne;;Tomatenmark;45;g;Vorrat;Konserven;200;
+Lasagne;;Butter;60;g;Kühlschrank;Molkerei;250;
+Lasagne;;Mehl;60;g;Vorrat;Backen;1000;
+Lasagne;;Milch;750;ml;Kühlschrank;Molkerei;1000;
+Lasagne;;Gemüsebrühe (Pulver);5;g;Vorrat;Gewürze;150;
+Nudelauflauf;Paprika, Gemüse nach Belieben. Muskat oder Pfeffer. Geriebener Käse 5 Min. vor Ende. 200 °C 45 Min.;Hörnle Nudeln;250;g;Vorrat;Nudeln;;ja
+Nudelauflauf;;Paprika;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Nudelauflauf;;Eier;1;Stk;Kühlschrank;Molkerei;10;
+Nudelauflauf;;Saure Sahne;200;ml;Kühlschrank;Milch & Käse;200;
+Nudelauflauf;;Salz;1;TL;Vorrat;Gewürze;;
+Putentöpfchen;Salz, Pfeffer, Paprika. Öl: 4-5 EL zum Anrösten + 3-4 EL zum Anbraten (hier 5 + 4 EL). Brühe 400 ml.;Zwiebeln;3;Stk;Vorrat;Obst & Gemüse;10;nein
+Putentöpfchen;;Öl;135;ml;Vorrat;Öl & Essig;1000;
+Putentöpfchen;;Crème fraîche;200;g;Kühlschrank;Molkerei;;
+Putentöpfchen;;Sahne;200;ml;Kühlschrank;Molkerei;200;
+Putentöpfchen;;Gemüsebrühe;400;ml;Vorrat;Konserven;;
+Putentöpfchen;;Putenschnitzel;6;Stk;Kühlschrank;Fleisch;;
+Putentöpfchen;;Champignons;250;g;Kühlschrank;Obst & Gemüse;250;
+Serviettenknödel;Menge für eine Serviette. Quark 20 %. Muskat. Semmelbrösel = Paniermehl.;Paniermehl;200;g;Vorrat;Backen;400;ja
+Serviettenknödel;;Öl;20;ml;Vorrat;Öl & Essig;1000;
+Serviettenknödel;;Eier;2;Stk;Kühlschrank;Molkerei;10;
+Serviettenknödel;;Quark;250;g;Kühlschrank;Molkerei;500;
+Serviettenknödel;;Salz;0,5;TL;Vorrat;Gewürze;;
+Weckknödel;Petersilie, Semmelbrösel, Salz, Pfeffer, Muskat (ohne Menge).;Brötchen (altbacken);8;Stk;Vorrat;Brot;6;ja
+Weckknödel;;Eier;1;Stk;Kühlschrank;Molkerei;10;
+Weckknödel;;Mehl;30;g;Vorrat;Backen;1000;
+Hüftsteak mit Hasselback-Kartoffeln;HelloFresh, 2P. Wasser 1 EL, Salz, Pfeffer. Öl: 2 EL + 1 EL.;Ofenkartoffel;4;Stk;Vorrat;Obst & Gemüse;;ja
+Hüftsteak mit Hasselback-Kartoffeln;;Ziegenfrischkäsetaler;125;g;Kühlschrank;Käse;;
+Hüftsteak mit Hasselback-Kartoffeln;;Walnüsse;20;g;Vorrat;Backen;;
+Hüftsteak mit Hasselback-Kartoffeln;;Wildpreiselbeerenmarmelade;25;g;Vorrat;Konserven;;
+Hüftsteak mit Hasselback-Kartoffeln;;Tomate;1;Stk;Kühlschrank;Obst & Gemüse;;
+Hüftsteak mit Hasselback-Kartoffeln;;Balsamico Creme;12;g;Vorrat;Öl & Essig;;
+Hüftsteak mit Hasselback-Kartoffeln;;Blattsalatmischung;75;g;Kühlschrank;Obst & Gemüse;;
+Hüftsteak mit Hasselback-Kartoffeln;;Hüftsteak vom Weiderind;250;g;Kühlschrank;Fleisch;;
+Hüftsteak mit Hasselback-Kartoffeln;;Öl;45;ml;Vorrat;Öl & Essig;1000;
+Hüftsteak mit Hasselback-Kartoffeln;;Olivenöl;15;ml;Vorrat;Öl & Essig;;
+Hüftsteak mit Hasselback-Kartoffeln;;Balsamicoessig;5;ml;Vorrat;Öl & Essig;;
+Hüftsteak mit Hasselback-Kartoffeln;;Salz;0,5;TL;Vorrat;Gewürze;;
+Schnitzel mit Brokkoli und Rahmsoße;HelloFresh, 2P. Wasser, Salz, Pfeffer. Öl: 1 EL + 1 EL + 100 ml. Semmelbrösel = Paniermehl.;Schweineschnitzel;250;g;Kühlschrank;Fleisch;;ja
+Schnitzel mit Brokkoli und Rahmsoße;;Brokkoli;1;Stk;Kühlschrank;Obst & Gemüse;;
+Schnitzel mit Brokkoli und Rahmsoße;;Kartoffeln;400;g;Vorrat;Obst & Gemüse;2000;
+Schnitzel mit Brokkoli und Rahmsoße;;Paniermehl;50;g;Vorrat;Backen;400;
+Schnitzel mit Brokkoli und Rahmsoße;;Kampot-Pfeffer;2;g;Vorrat;Gewürze;;
+Schnitzel mit Brokkoli und Rahmsoße;;Zwiebeln;2;Stk;Vorrat;Obst & Gemüse;10;
+Schnitzel mit Brokkoli und Rahmsoße;;Hühnerbrühe;4;g;Vorrat;Gewürze;;
+Schnitzel mit Brokkoli und Rahmsoße;;Mayonnaise;25;g;Kühlschrank;Molkerei;;
+Schnitzel mit Brokkoli und Rahmsoße;;Kochsahne;150;g;Kühlschrank;Molkerei;;
+Schnitzel mit Brokkoli und Rahmsoße;;Öl;130;ml;Vorrat;Öl & Essig;1000;
+Schnitzel mit Brokkoli und Rahmsoße;;Mehl;30;g;Vorrat;Backen;1000;
+Chicken Fingers mit Kartoffelspalten;HelloFresh, 2P. Karte schlecht lesbar, Mengen bitte prüfen. Salz, Pfeffer. Öl: 1 EL + 4 EL.;Hähnchenbrustfilet in Lake;250;g;Kühlschrank;Fleisch;;nein
+Chicken Fingers mit Kartoffelspalten;;Mayonnaise;50;g;Kühlschrank;Molkerei;;
+Chicken Fingers mit Kartoffelspalten;;Hello Paprika;8;g;Vorrat;Gewürze;;
+Chicken Fingers mit Kartoffelspalten;;Kartoffeln;600;g;Vorrat;Obst & Gemüse;2000;
+Chicken Fingers mit Kartoffelspalten;;Rote Spitzpaprika;1;Stk;Kühlschrank;Obst & Gemüse;;
+Chicken Fingers mit Kartoffelspalten;;Pankomehl;25;g;Vorrat;Backen;;
+Chicken Fingers mit Kartoffelspalten;;Ketchup;25;g;Vorrat;Konserven;;
+Chicken Fingers mit Kartoffelspalten;;Hello Grünzeug;4;g;Vorrat;Gewürze;;
+Chicken Fingers mit Kartoffelspalten;;Tomatenpesto;25;g;Vorrat;Konserven;;
+Chicken Fingers mit Kartoffelspalten;;Gurke;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Chicken Fingers mit Kartoffelspalten;;Öl;75;ml;Vorrat;Öl & Essig;1000;
+Chicken Fingers mit Kartoffelspalten;;Weißweinessig;5;ml;Vorrat;Öl & Essig;;
+Veganer Spätzle-Auflauf;HelloFresh, 2P. Karte schlecht lesbar, Mengen bitte prüfen. Wasser 50 ml, Salz, Pfeffer.;Vegane Spätzle;400;g;Kühlschrank;Kühlregal;;nein
+Veganer Spätzle-Auflauf;;Champignons;200;g;Kühlschrank;Obst & Gemüse;250;
+Veganer Spätzle-Auflauf;;Babyspinat;50;g;Kühlschrank;Obst & Gemüse;;
+Veganer Spätzle-Auflauf;;Worcester Sauce;16;ml;Vorrat;Konserven;;
+Veganer Spätzle-Auflauf;;Senf;10;ml;Vorrat;Konserven;;
+Veganer Spätzle-Auflauf;;Knoblauch & Zwiebel in Rapsöl (gehackt);35;g;Kühlschrank;Kühlregal;;
+Veganer Spätzle-Auflauf;;Hello Umami;8;g;Vorrat;Gewürze;;
+Veganer Spätzle-Auflauf;;Oatly Bio Cuisine;200;ml;Kühlschrank;Molkerei;;
+Veganer Spätzle-Auflauf;;Kürbiskerne (geröstet);20;g;Vorrat;Backen;;
+Knoblauch-Hähnchen mit Kichererbsen;HelloFresh, 2P. 1 Prise Zucker, Salz, Pfeffer. Olivenöl: 1 EL + 1 EL.;Hähnchengeschnetzeltes (mariniert);250;g;Kühlschrank;Fleisch;;nein
+Knoblauch-Hähnchen mit Kichererbsen;;Salatherz (Romana);150;g;Kühlschrank;Obst & Gemüse;;
+Knoblauch-Hähnchen mit Kichererbsen;;Kichererbsen (g);390;g;Vorrat;Konserven;;
+Knoblauch-Hähnchen mit Kichererbsen;;Knoblauch;2;Stk;Vorrat;Obst & Gemüse;10;
+Knoblauch-Hähnchen mit Kichererbsen;;Zitrone;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Knoblauch-Hähnchen mit Kichererbsen;;Naturjoghurt;100;g;Kühlschrank;Molkerei;500;
+Knoblauch-Hähnchen mit Kichererbsen;;Mayonnaise;25;g;Kühlschrank;Molkerei;;
+Knoblauch-Hähnchen mit Kichererbsen;;Hartkäse (gerieben);20;g;Kühlschrank;Käse;;
+Knoblauch-Hähnchen mit Kichererbsen;;Senf;10;ml;Vorrat;Konserven;;
+Knoblauch-Hähnchen mit Kichererbsen;;Hello Paprika;4;g;Vorrat;Gewürze;;
+Knoblauch-Hähnchen mit Kichererbsen;;Tomate;1;Stk;Kühlschrank;Obst & Gemüse;;
+Knoblauch-Hähnchen mit Kichererbsen;;Olivenöl;30;ml;Vorrat;Öl & Essig;;
+Striploin Steak mit Grillgemüse;HelloFresh, 2P. Karte gedreht und schlecht lesbar, Mengen (besonders Öl) bitte prüfen. Salz, Pfeffer. Saure Sahne: 100 g wie ml gerechnet.;Striploin Steak;360;g;Kühlschrank;Fleisch;;nein
+Striploin Steak mit Grillgemüse;;Junger Gouda (gerieben);50;g;Kühlschrank;Käse;;
+Striploin Steak mit Grillgemüse;;Ofenkartoffel;2;Stk;Vorrat;Obst & Gemüse;;
+Striploin Steak mit Grillgemüse;;Saure Sahne;100;ml;Kühlschrank;Milch & Käse;200;
+Striploin Steak mit Grillgemüse;;Petersilie (glatt);10;g;Kühlschrank;Obst & Gemüse;;
+Striploin Steak mit Grillgemüse;;Tomate;1;Stk;Kühlschrank;Obst & Gemüse;;
+Striploin Steak mit Grillgemüse;;Salatherz (Stk);1;Stk;Kühlschrank;Obst & Gemüse;;
+Striploin Steak mit Grillgemüse;;Rote Spitzpaprika;1;Stk;Kühlschrank;Obst & Gemüse;;
+Striploin Steak mit Grillgemüse;;Milder Chili-Mix;2;g;Vorrat;Gewürze;;
+Striploin Steak mit Grillgemüse;;Senf;10;ml;Vorrat;Konserven;;
+Striploin Steak mit Grillgemüse;;Hello Paprika;2;g;Vorrat;Gewürze;;
+Striploin Steak mit Grillgemüse;;Öl;45;ml;Vorrat;Öl & Essig;1000;
+Striploin Steak mit Grillgemüse;;Honig;5;g;Vorrat;Backen;;
+Striploin Steak mit Grillgemüse;;Weißweinessig;15;ml;Vorrat;Öl & Essig;;
+Hüftsteak mit Bohnen und Kartoffeln;HelloFresh, 2P. Karte gedreht und schlecht lesbar, Mengen (besonders Öl) bitte prüfen. Wasser, Salz, Pfeffer.;Hüftsteak vom Weiderind;250;g;Kühlschrank;Fleisch;;ja
+Hüftsteak mit Bohnen und Kartoffeln;;Buschbohnen;150;g;Kühlschrank;Obst & Gemüse;;
+Hüftsteak mit Bohnen und Kartoffeln;;Petersilie/Zitronenthymian;10;g;Kühlschrank;Obst & Gemüse;;
+Hüftsteak mit Bohnen und Kartoffeln;;Eingelegter grüner Pfeffer;10;g;Vorrat;Konserven;;
+Hüftsteak mit Bohnen und Kartoffeln;;Kochsahne;150;g;Kühlschrank;Molkerei;;
+Hüftsteak mit Bohnen und Kartoffeln;;Knoblauch;1;Stk;Vorrat;Obst & Gemüse;10;
+Hüftsteak mit Bohnen und Kartoffeln;;Hartkäse (gerieben);20;g;Kühlschrank;Käse;;
+Hüftsteak mit Bohnen und Kartoffeln;;Rinderbrühe;4;g;Vorrat;Gewürze;;
+Hüftsteak mit Bohnen und Kartoffeln;;Haselnusskerne (geröstet);10;g;Vorrat;Backen;;
+Hüftsteak mit Bohnen und Kartoffeln;;Kartoffeln;400;g;Vorrat;Obst & Gemüse;2000;
+Hüftsteak mit Bohnen und Kartoffeln;;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;
+Hüftsteak mit Bohnen und Kartoffeln;;Öl;45;ml;Vorrat;Öl & Essig;1000;
+Spaghetti Onepot;HelloFresh, 2P. Wasser 400 ml, Salz, Pfeffer.;Spaghetti;270;g;Vorrat;Nudeln;500;nein
+Spaghetti Onepot;;Tomatensugo;300;g;Vorrat;Konserven;;
+Spaghetti Onepot;;Knoblauch;2;Stk;Vorrat;Obst & Gemüse;10;
+Spaghetti Onepot;;Pinienkerne;20;g;Vorrat;Backen;;
+Spaghetti Onepot;;Tomate;2;Stk;Kühlschrank;Obst & Gemüse;;
+Spaghetti Onepot;;Basilikum/Oregano;10;g;Kühlschrank;Obst & Gemüse;;
+Spaghetti Onepot;;Hartkäse (gerieben);40;g;Kühlschrank;Käse;;
+Spaghetti Onepot;;Frischecreme;100;g;Kühlschrank;Molkerei;;
+Spaghetti Onepot;;Gemüsebrühe (Pulver);4;g;Vorrat;Gewürze;150;
+Spaghetti Onepot;;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;
+Spaghetti Onepot;;Öl;15;ml;Vorrat;Öl & Essig;1000;
+Linguine mit Pistazien-Tomaten-Salat;HelloFresh, 2P. Zucker, Salz, Pfeffer.;Frische Linguine;375;g;Kühlschrank;Kühlregal;;nein
+Linguine mit Pistazien-Tomaten-Salat;;Mozzarella;125;g;Kühlschrank;Käse;125;
+Linguine mit Pistazien-Tomaten-Salat;;Rote Zwiebel;1;Stk;Vorrat;Obst & Gemüse;;
+Linguine mit Pistazien-Tomaten-Salat;;Knoblauch;1;Stk;Vorrat;Obst & Gemüse;10;
+Linguine mit Pistazien-Tomaten-Salat;;Basilikum;10;g;Kühlschrank;Obst & Gemüse;;
+Linguine mit Pistazien-Tomaten-Salat;;Pistazienkerne (geröstet);20;g;Vorrat;Backen;;
+Linguine mit Pistazien-Tomaten-Salat;;Rote Kirschtomaten;250;g;Kühlschrank;Obst & Gemüse;;
+Linguine mit Pistazien-Tomaten-Salat;;Tomatensugo;300;g;Vorrat;Konserven;;
+Linguine mit Pistazien-Tomaten-Salat;;Rote Chilischote;1;Stk;Kühlschrank;Obst & Gemüse;;
+Linguine mit Pistazien-Tomaten-Salat;;Olivenöl;30;ml;Vorrat;Öl & Essig;;
+Linguine mit Pistazien-Tomaten-Salat;;Balsamicoessig;5;ml;Vorrat;Öl & Essig;;
+Hähnchen-Tortillas mit Gurke;HelloFresh, 2P. Olivenöl (ohne Menge), Salz, Pfeffer. Öl: 1 EL + 1 EL.;Hähnchengeschnetzeltes (mariniert);250;g;Kühlschrank;Fleisch;;ja
+Hähnchen-Tortillas mit Gurke;;Weizentortillas;200;g;Vorrat;Brot;;
+Hähnchen-Tortillas mit Gurke;;Hirtenkäse leicht;100;g;Kühlschrank;Käse;;
+Hähnchen-Tortillas mit Gurke;;Gurke;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Hähnchen-Tortillas mit Gurke;;Zitrone;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Hähnchen-Tortillas mit Gurke;;Naturjoghurt;100;g;Kühlschrank;Molkerei;500;
+Hähnchen-Tortillas mit Gurke;;Petersilie/Schnittlauch;10;g;Kühlschrank;Obst & Gemüse;;
+Hähnchen-Tortillas mit Gurke;;Tomate;1;Stk;Kühlschrank;Obst & Gemüse;;
+Hähnchen-Tortillas mit Gurke;;Öl;30;ml;Vorrat;Öl & Essig;1000;
+Hähnchen-Tortillas mit Paprika;HelloFresh, 2P. Wasser 50 ml, Salz, Pfeffer. Öl: 1 EL + 100 ml.;Hähnchengeschnetzeltes;250;g;Kühlschrank;Fleisch;;nein
+Hähnchen-Tortillas mit Paprika;;Weizentortillas;200;g;Vorrat;Brot;;
+Hähnchen-Tortillas mit Paprika;;Salatherz (Stk);1;Stk;Kühlschrank;Obst & Gemüse;;
+Hähnchen-Tortillas mit Paprika;;Paprika;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Hähnchen-Tortillas mit Paprika;;Karotte;1;Stk;Kühlschrank;Obst & Gemüse;;
+Hähnchen-Tortillas mit Paprika;;Limette;1;Stk;Kühlschrank;Obst & Gemüse;;
+Hähnchen-Tortillas mit Paprika;;Frühlingszwiebel;1;Stk;Kühlschrank;Obst & Gemüse;;
+Hähnchen-Tortillas mit Paprika;;Junger Gouda (gerieben);50;g;Kühlschrank;Käse;;
+Hähnchen-Tortillas mit Paprika;;Naturjoghurt;75;g;Kühlschrank;Molkerei;500;
+Hähnchen-Tortillas mit Paprika;;Hello Paprika;4;g;Vorrat;Gewürze;;
+Hähnchen-Tortillas mit Paprika;;Öl;115;ml;Vorrat;Öl & Essig;1000;
+Hähnchen-Tortillas mit Paprika;;Mehl;45;g;Vorrat;Backen;1000;
+Schnitzel mit Radieschen-Salat;HelloFresh, 2P. Salz, Pfeffer. Öl: 1 EL + 100 ml. Zucker 0,5 TL. Semmelbrösel = Paniermehl.;Schweineschnitzel;250;g;Kühlschrank;Fleisch;;ja
+Schnitzel mit Radieschen-Salat;;Radieschen;100;g;Kühlschrank;Obst & Gemüse;;
+Schnitzel mit Radieschen-Salat;;Zitrone;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Schnitzel mit Radieschen-Salat;;Petersilie/Schnittlauch;10;g;Kühlschrank;Obst & Gemüse;;
+Schnitzel mit Radieschen-Salat;;Naturjoghurt;75;g;Kühlschrank;Molkerei;500;
+Schnitzel mit Radieschen-Salat;;Mayonnaise;25;g;Kühlschrank;Molkerei;;
+Schnitzel mit Radieschen-Salat;;Paniermehl;50;g;Vorrat;Backen;400;
+Schnitzel mit Radieschen-Salat;;Hello Paprika;2;g;Vorrat;Gewürze;;
+Schnitzel mit Radieschen-Salat;;Kartoffeln;400;g;Vorrat;Obst & Gemüse;2000;
+Schnitzel mit Radieschen-Salat;;Blattsalatmischung;50;g;Kühlschrank;Obst & Gemüse;;
+Schnitzel mit Radieschen-Salat;;Gurke;1;Stk;Kühlschrank;Obst & Gemüse;1;
+Schnitzel mit Radieschen-Salat;;Öl;115;ml;Vorrat;Öl & Essig;1000;
+Schnitzel mit Radieschen-Salat;;Mehl;30;g;Vorrat;Backen;1000;
+Schnitzel mit Radieschen-Salat;;Eier;1;Stk;Kühlschrank;Molkerei;10;
+Schnitzel mit Radieschen-Salat;;Zucker;2,5;g;Vorrat;Backen;1000;
+Schweinefilet-Medaillons mit Honig-Karotten;HelloFresh, 2P. Wasser 50 ml, Salz, Pfeffer. Öl: 0,5 + 0,5 + 1 EL. Honig 1 TL.;Schweinefilet;250;g;Kühlschrank;Fleisch;;ja
+Schweinefilet-Medaillons mit Honig-Karotten;;Karotte;6;Stk;Kühlschrank;Obst & Gemüse;;
+Schweinefilet-Medaillons mit Honig-Karotten;;Schnittlauch;10;g;Kühlschrank;Obst & Gemüse;;
+Schweinefilet-Medaillons mit Honig-Karotten;;Rote Zwiebel;1;Stk;Vorrat;Obst & Gemüse;;
+Schweinefilet-Medaillons mit Honig-Karotten;;Kochsahne;150;g;Kühlschrank;Molkerei;;
+Schweinefilet-Medaillons mit Honig-Karotten;;Rinderbrühe;4;g;Vorrat;Gewürze;;
+Schweinefilet-Medaillons mit Honig-Karotten;;Kartoffeln;400;g;Vorrat;Obst & Gemüse;2000;
+Schweinefilet-Medaillons mit Honig-Karotten;;Öl;30;ml;Vorrat;Öl & Essig;1000;
+Schweinefilet-Medaillons mit Honig-Karotten;;Honig;5;g;Vorrat;Backen;;
+Frikadellen mit Kartoffelspalten und Karottensalat;HelloFresh, 2P. Zucker, Weißweinessig, Pfeffer und ein weiteres Öl im Teig ohne Menge. Öl: 1 EL + 1 EL. Milch 1,5 EL. Salz 0,5 TL.;Hackfleischzubereitung (Weiderind);200;g;Kühlschrank;Fleisch;;nein
+Frikadellen mit Kartoffelspalten und Karottensalat;;Ofenkartoffel;3;Stk;Vorrat;Obst & Gemüse;;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Karotte;3;Stk;Kühlschrank;Obst & Gemüse;;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Dill;10;g;Kühlschrank;Obst & Gemüse;;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Knoblauch & Zwiebel in Rapsöl (gehackt);35;g;Kühlschrank;Kühlregal;;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Saure Sahne;200;ml;Kühlschrank;Milch & Käse;200;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Paniermehl;25;g;Vorrat;Backen;400;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Hello Souflaki;6;g;Vorrat;Gewürze;;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Öl;30;ml;Vorrat;Öl & Essig;1000;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Salz;0,5;TL;Vorrat;Gewürze;;
+Frikadellen mit Kartoffelspalten und Karottensalat;;Milch;22,5;ml;Kühlschrank;Molkerei;1000;
+Putenschnitzel in Tomaten-Sahne-Soße;Webrezept, Zutaten für 3 Portionen. Salz, Pfeffer, Paprikapulver, Oregano. Dazu passen Nudeln. Sonnenblumenöl = Öl. Knoblauch: 1 TL gehäuft (= 5 g).;Putenschnitzel (g);300;g;Kühlschrank;Fleisch;;nein
+Putenschnitzel in Tomaten-Sahne-Soße;;Tomatenmark;15;g;Vorrat;Konserven;200;
+Putenschnitzel in Tomaten-Sahne-Soße;;Senf;15;ml;Vorrat;Konserven;;
+Putenschnitzel in Tomaten-Sahne-Soße;;Zwiebeln;1;Stk;Vorrat;Obst & Gemüse;10;
+Putenschnitzel in Tomaten-Sahne-Soße;;Sahne;200;ml;Kühlschrank;Molkerei;200;
+Putenschnitzel in Tomaten-Sahne-Soße;;Cherrytomaten;250;g;Kühlschrank;Obst & Gemüse;;
+Putenschnitzel in Tomaten-Sahne-Soße;;Knoblauch (gewürfelt);5;g;Vorrat;Gewürze;;
+Putenschnitzel in Tomaten-Sahne-Soße;;Schmelzkäse;25;g;Kühlschrank;Milch & Käse;200;
+Putenschnitzel in Tomaten-Sahne-Soße;;Öl;15;ml;Vorrat;Öl & Essig;1000;
+Putenschnitzel in Tomaten-Sahne-Soße;;Olivenöl;15;ml;Vorrat;Öl & Essig;;
+Pulled-Pork-Tacos;HelloFresh, 2P. Wasser 50 ml, Salz, Pfeffer. Limetten: Karte unsicher (2).;Pulled Pork;250;g;Kühlschrank;Fleisch;;nein
+Pulled-Pork-Tacos;;Weizentortillas;200;g;Vorrat;Brot;;
+Pulled-Pork-Tacos;;Tomate;2;Stk;Kühlschrank;Obst & Gemüse;;
+Pulled-Pork-Tacos;;Koriander/Minze;10;g;Kühlschrank;Obst & Gemüse;;
+Pulled-Pork-Tacos;;Rote Zwiebel;1;Stk;Vorrat;Obst & Gemüse;;
+Pulled-Pork-Tacos;;Limette;2;Stk;Kühlschrank;Obst & Gemüse;;
+Pulled-Pork-Tacos;;Ketchup;25;g;Vorrat;Konserven;;
+Pulled-Pork-Tacos;;Hello Cajun;4;g;Vorrat;Gewürze;;
+Pulled-Pork-Tacos;;Smashed Avocado;100;g;Kühlschrank;Obst & Gemüse;;
+Pulled-Pork-Tacos;;Zucker;15;g;Vorrat;Backen;1000;
+Pulled-Pork-Tacos;;Öl;15;ml;Vorrat;Öl & Essig;1000;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;HelloFresh, 2P. Wasser 150 ml, 1 Prise Salz, Pfeffer.;Fettuccine;270;g;Vorrat;Nudeln;;nein
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Kräuterseitling;150;g;Kühlschrank;Obst & Gemüse;;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Champignons;125;g;Kühlschrank;Obst & Gemüse;250;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Petersilie/Zitronenthymian;10;g;Kühlschrank;Obst & Gemüse;;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Knoblauch;1;Stk;Vorrat;Obst & Gemüse;10;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Hartkäse (gerieben);40;g;Kühlschrank;Käse;;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Gemüsebrühe (Pulver);6;g;Vorrat;Gewürze;150;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Kochsahne;150;g;Kühlschrank;Molkerei;;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Trüffelöl;8;ml;Vorrat;Öl & Essig;;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Haselnusskerne (geröstet);10;g;Vorrat;Backen;;
+Fettuccine mit Kräuterseitlingen und Haselnüssen;;Olivenöl;15;ml;Vorrat;Öl & Essig;;
