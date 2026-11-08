@@ -1,6 +1,6 @@
 # Vorrat – Projektkontext für Claude Code
 
-Persönliche Web-App für einen **Ein-Personen-Haushalt**: Vorratsverwaltung, rotierender
+Web-App für **Haushalte (ein oder mehrere Benutzer pro Vorratsschrank)**: Vorratsverwaltung, rotierender
 Speiseplan und automatische Einkaufsliste mit Zwei-Wege-Sync zu **Google Keep**.
 Gehostet auf **Railway** (Docker, SQLite auf Volume). Sprache der Oberfläche: Deutsch.
 
@@ -17,11 +17,20 @@ Gehostet auf **Railway** (Docker, SQLite auf Volume). Sprache der Oberfläche: D
   Railway-Volumes hängen an genau einem Service – deshalb kein separater Worker-Service.
 - **gkeepapi** ist inoffiziell und kann brechen. Der Sync darf die App nie lahmlegen:
   Fehler werden geloggt und in `settings.keep_last_error` angezeigt.
-- Login: ein Passwort aus `APP_PASSWORD`, Session-Cookie (90 Tage).
+- Login: Benutzername + Passwort (Hash in `accounts.db`), Session-Cookie (90 Tage).
+  `APP_PASSWORD` ist nur noch der Nachweis, mit dem der Besitzer der bisherigen Daten beim Registrieren
+  den bestehenden Schrank (Haushalt 1) übernimmt.
+- **Mehrere Vorratsschränke**: pro Schrank eine eigene SQLite-Datei mit dem unveränderten Schema
+  (Haushalt 1 = bisherige `vorrat.db`, weitere unter `households/<id>.db`). `accounts.db` kennt nur
+  `households` (Name, Beitrittscode) und `users` (Rolle owner|member). Neue Benutzer bekommen automatisch
+  einen eigenen leeren Schrank, außer sie treten per Beitrittscode einem bestehenden bei. Der Keep-Sync
+  (Umgebungsvariablen = ein Konto) läuft nur für Haushalt 1.
 
 ## Struktur
 ```
 app/__init__.py     create_app(), alle Routen
+app/accounts.py     Benutzer, Schränke, Beitrittscodes (accounts.db, ohne Flask)
+app/recipe_csv.py   CSV-Import von Rezepten, Vorlage und KI-Anleitung (ohne Flask)
 app/db.py           Schema (SCHEMA), connect(), Settings-Helfer
 app/logic.py        Kernlogik: Plan, Bedarf, Einkaufsliste, Bestand
 app/keep_sync.py    Google-Keep-Abgleich (sync_list ist rein und testbar)
@@ -82,7 +91,7 @@ Lokale DB zurücksetzen: `rm -rf data/` (wird beim Start neu aus seed.json befü
 
 ## Roadmap (nächste Schritte, in dieser Reihenfolge)
 1. **Migrationen**: einfache `schema_version` in settings + Migrationsliste in db.py.
-2. **Rezepte & Produkte in der UI bearbeiten**: Rezepte (Name, Notiz, Zutaten, aktiv/inaktiv) erledigt;
+2. **Rezepte & Produkte in der UI bearbeiten**: Rezepte (Name, Notiz, Zutaten, aktiv/inaktiv, CSV-Import unter /rezepte/import) erledigt;
    offen: Rezepte neu anlegen/löschen, Produkte bearbeiten.
 3. **Backup**: nächtlicher `sqlite3 .backup`-Dump (z. B. nach S3/R2 oder per Endpoint
    `/export` als Download, geschützt durch Login). Danach Import-Funktion.
@@ -95,6 +104,9 @@ Lokale DB zurücksetzen: `rm -rf data/` (wird beim Start neu aus seed.json befü
 8. Optional: Rotation in der UI bearbeiten, Gerichte tauschen, „Reste“-Vorschläge.
 
 ## Bekannte Grenzen
+- Neue Schränke haben keine Rotation: Importierte Rezepte sind aktiv, liegen aber erst im Plan, wenn sie dort
+  auf einen Tag gelegt werden (Idee: Rotation aus aktiven Rezepten erzeugen).
+- Benutzer können nicht aus einem Schrank entfernt werden (Beitrittscode neu erzeugen sperrt nur Neue aus).
 - Gewürze, Salz, Pfeffer werden bewusst nicht getrackt.
 - Mengen in seed.json sind Schätzwerte für 1 Portion – der Nutzer wird sie anpassen.
 - Frischware ohne Mindestbestand erscheint nur, wenn ein geplantes Gericht sie braucht.

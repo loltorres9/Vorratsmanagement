@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Konto anlegen – Vorrat{% endblock %}
+{% block content %}
+<section class="login register">
+  <h1>Konto anlegen</h1>
+  <form method="post" class="stack">
+    <label>Benutzername <input name="name" value="{{ form.get('name', '') }}" autocomplete="username" autocapitalize="none" required autofocus></label>
+    <label>Passwort (mindestens 8 Zeichen) <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+
+    <fieldset class="choice">
+      <legend>Vorratsschrank</legend>
+      <label class="check"><input type="radio" name="mode" value="new" {% if form.get('mode', 'new') == 'new' %}checked{% endif %}> Neuen, eigenen Vorratsschrank anlegen</label>
+      <label class="check"><input type="radio" name="mode" value="join" {% if form.get('mode') == 'join' %}checked{% endif %}> Einem bestehenden beitreten</label>
+    </fieldset>
+
+    <label>Beitrittscode (nur zum Beitreten) <input name="join_code" value="{{ form.get('join_code', '') }}" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off"></label>
+    <label>Name des neuen Vorratsschranks (optional) <input name="household_name" value="{{ form.get('household_name', '') }}" maxlength="60"></label>
+    <label class="check"><input type="checkbox" name="sample" value="1"> Mit Beispieldaten starten (Rezepte und Zutaten zum Ausprobieren)</label>
+
+    {% if claimable %}
+    <label>Bisheriges App-Passwort (nur für den bereits bestehenden Vorratsschrank)
+      <input name="claim_password" type="password" autocomplete="off">
+    </label>
+    <p class="sub">Wer den bestehenden Vorratsschrank mit seinen Daten übernehmen will, trägt hier das bisherige <code>APP_PASSWORD</code> ein und legt keinen neuen an.</p>
+    {% endif %}
+    <button class="primary" type="submit">Konto anlegen</button>
+  </form>
+  <p class="sub"><a href="{{ url_for('login') }}">Schon ein Konto? Anmelden</a></p>
+</section>
+{% endblock %}

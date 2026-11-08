@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from datetime import date, timedelta
 
-from app import create_app, db, keep_sync, logic, seed
+from app import accounts, create_app, db, keep_sync, logic, recipe_csv, seed
 
 MONDAY = date(2026, 11, 2)
 
@@ -442,12 +442,14 @@ class WebTest(unittest.TestCase):
         self.c = self.app.test_client()
 
     def login(self):
-        r = self.c.post("/login", data={"password": "geheim"})
+        """Der bisherige Vorratsschrank gehört dem, der das alte App-Passwort nennt."""
+        r = self.c.post("/registrieren", data={"name": "ich", "password": "langespasswort",
+                                               "mode": "new", "claim_password": "geheim"})
         self.assertEqual(r.status_code, 302)
 
     def test_requires_login(self):
         self.assertEqual(self.c.get("/").status_code, 302)
-        self.assertEqual(self.c.post("/login", data={"password": "falsch"}).status_code, 200)
+        self.assertEqual(self.c.post("/login", data={"name": "x", "password": "falsch"}).status_code, 200)
 
     def test_pages_render(self):
         self.login()
@@ -503,6 +505,232 @@ class WebTest(unittest.TestCase):
         self.assertEqual(self.c.post(f"/rezepte/{rid}/active", data={"active": "0"}).status_code, 302)
         self.assertIn("inaktiv", self.c.get("/rezepte").get_data(as_text=True))
         self.assertEqual(self.c.get("/plan").status_code, 200)
+
+
+class MultiUserTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.cfg = {"TESTING": True, "DATABASE_PATH": os.path.join(self.tmp, "w.db"),
+                    "APP_PASSWORD": "geheim", "START_SYNC": False, "SESSION_COOKIE_SECURE": False}
+        self.app = create_app(self.cfg)
+
+    def client(self, name, **extra):
+        c = self.app.test_client()
+        data = {"name": name, "password": "langespasswort", "mode": "new"}
+        data.update(extra)
+        self.assertEqual(c.post("/registrieren", data=data).status_code, 302)
+        return c
+
+    def household_conn(self, hid):
+        return db.connect(os.path.join(self.tmp, "households", f"{hid}.db"))
+
+    def test_claiming_old_cabinet_needs_old_password(self):
+        c = self.app.test_client()
+        r = c.post("/registrieren", data={"name": "dieb", "password": "langespasswort", "claim_password": "falsch"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("stimmt nicht", r.get_data(as_text=True))
+        self.client("ich", claim_password="geheim")
+        aconn = accounts.connect(os.path.join(self.tmp, "accounts.db"))
+        self.assertTrue(accounts.is_claimed(aconn))
+        self.assertEqual(accounts.get_user(aconn, 1)["household_id"], accounts.LEGACY_ID)
+
+    def test_new_user_gets_own_empty_cabinet(self):
+        self.client("ich", claim_password="geheim")
+        neu = self.client("neu")
+        conn = self.household_conn(2)
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM products").fetchone()[0], 0)
+        neu.post("/einkauf/add", data={"name": "Kaffee", "qty": ""})
+        self.assertIn("Kaffee", neu.get("/einkauf").get_data(as_text=True))
+        legacy = db.connect(self.cfg["DATABASE_PATH"])
+        self.assertEqual(legacy.execute("SELECT COUNT(*) FROM shopping_items WHERE name='Kaffee'").fetchone()[0], 0)
+
+    def test_sample_data_is_optional(self):
+        self.client("ich", claim_password="geheim")
+        self.client("mit", sample="1")
+        self.assertEqual(self.household_conn(2).execute(
+            "SELECT COUNT(*) FROM recipes WHERE kind='meal'").fetchone()[0] > 30, True)
+
+    def test_join_with_code_shares_data(self):
+        a = self.client("anna", claim_password="geheim")
+        code = accounts.show_code(accounts.get_household(
+            accounts.connect(os.path.join(self.tmp, "accounts.db")), 1)["join_code"])
+        self.assertIn(code, a.get("/haushalt").get_data(as_text=True))
+        b = self.app.test_client()
+        bad = b.post("/registrieren", data={"name": "ben", "password": "langespasswort", "mode": "join",
+                                            "join_code": "NOPE-NOPE"})
+        self.assertEqual(bad.status_code, 200)
+        self.assertEqual(b.post("/registrieren", data={"name": "ben", "password": "langespasswort", "mode": "join",
+                                                       "join_code": code.lower()}).status_code, 302)
+        a.post("/einkauf/add", data={"name": "Kaffee", "qty": ""})
+        self.assertIn("Kaffee", b.get("/einkauf").get_data(as_text=True))
+        aconn = accounts.connect(os.path.join(self.tmp, "accounts.db"))
+        self.assertEqual([m["role"] for m in accounts.members(aconn, 1)], ["owner", "member"])
+
+    def test_only_owner_changes_code_and_old_code_dies(self):
+        a = self.client("anna", claim_password="geheim")
+        aconn = accounts.connect(os.path.join(self.tmp, "accounts.db"))
+        old = accounts.get_household(aconn, 1)["join_code"]
+        b = self.app.test_client()
+        b.post("/registrieren", data={"name": "ben", "password": "langespasswort", "mode": "join", "join_code": old})
+        b.post("/haushalt/code")
+        self.assertEqual(accounts.get_household(aconn, 1)["join_code"], old)
+        a.post("/haushalt/code")
+        self.assertNotEqual(accounts.get_household(aconn, 1)["join_code"], old)
+        self.assertIsNone(accounts.find_by_code(aconn, old))
+
+    def test_login_and_logout(self):
+        self.client("anna", claim_password="geheim")
+        c = self.app.test_client()
+        self.assertEqual(c.post("/login", data={"name": "ANNA", "password": "falsch1234"}).status_code, 200)
+        self.assertEqual(c.post("/login", data={"name": "ANNA", "password": "langespasswort"}).status_code, 302)
+        self.assertEqual(c.get("/").status_code, 200)
+        c.post("/logout")
+        self.assertEqual(c.get("/").status_code, 302)
+
+    def test_duplicate_name_and_short_password_rejected(self):
+        self.client("anna", claim_password="geheim")
+        c = self.app.test_client()
+        for data in ({"name": "Anna", "password": "langespasswort"}, {"name": "neu", "password": "kurz"}):
+            self.assertEqual(c.post("/registrieren", data=data).status_code, 200)
+
+    def test_last_member_joining_elsewhere_deletes_old_cabinet(self):
+        self.client("anna", claim_password="geheim")
+        ben = self.client("ben")
+        path = os.path.join(self.tmp, "households", "2.db")
+        self.assertTrue(os.path.exists(path))
+        aconn = accounts.connect(os.path.join(self.tmp, "accounts.db"))
+        code = accounts.get_household(aconn, 1)["join_code"]
+        ben.post("/haushalt/beitreten", data={"join_code": code})  # ohne Bestätigung: nichts passiert
+        self.assertEqual(accounts.get_user(aconn, 2)["household_id"], 2)
+        ben.post("/haushalt/beitreten", data={"join_code": code, "confirm": "1"})
+        self.assertEqual(accounts.get_user(aconn, 2)["household_id"], 1)
+        self.assertFalse(os.path.exists(path))
+        self.assertIsNone(accounts.get_household(aconn, 2))
+
+    def test_leaving_makes_own_cabinet_and_promotes_member(self):
+        a = self.client("anna", claim_password="geheim")
+        aconn = accounts.connect(os.path.join(self.tmp, "accounts.db"))
+        b = self.app.test_client()
+        b.post("/registrieren", data={"name": "ben", "password": "langespasswort", "mode": "join",
+                                      "join_code": accounts.get_household(aconn, 1)["join_code"]})
+        a.post("/haushalt/verlassen")
+        self.assertEqual(accounts.get_user(aconn, 1)["household_id"], 2)
+        self.assertEqual(accounts.get_user(aconn, 2)["role"], "owner")  # Ben ist nun Besitzer des alten Schranks
+        self.assertEqual(accounts.get_user(aconn, 1)["role"], "owner")
+        self.assertEqual(self.household_conn(2).execute("SELECT COUNT(*) FROM products").fetchone()[0], 0)
+
+    def test_restart_keeps_all_cabinets(self):
+        self.client("anna", claim_password="geheim")
+        self.client("ben")
+        create_app(self.cfg)  # Neustart
+        self.assertTrue(os.path.exists(os.path.join(self.tmp, "households", "2.db")))
+
+
+class RecipeCsvTest(unittest.TestCase):
+    def conn(self):
+        c = db.connect(os.path.join(tempfile.mkdtemp(), "c.db"))
+        db.init(c)
+        return c
+
+    def test_template_roundtrip(self):
+        recipes, errors = recipe_csv.parse(recipe_csv.decode(recipe_csv.template_csv().encode("utf-8")))
+        self.assertEqual(errors, [])
+        self.assertEqual([r["name"] for r in recipes], ["Spaghetti Bolognese", "Gemüsepfanne mit Reis"])
+        self.assertEqual(len(recipes[0]["ingredients"]), 4)
+        conn = self.conn()
+        res = recipe_csv.apply(conn, recipes)
+        self.assertEqual(len(res["created"]), 2)
+        rid = conn.execute("SELECT id FROM recipes WHERE name='Spaghetti Bolognese'").fetchone()["id"]
+        ings = {i["name"]: i for i in logic.ingredients(conn, rid)}
+        self.assertEqual(ings["Rinderhack"]["qty"], 150)
+        self.assertEqual(ings["Rinderhack"]["location"], "Kühlschrank")
+        self.assertEqual(ings["Rinderhack"]["pack_size"], 500)
+        self.assertEqual(ings["Rinderhack"]["category"], "Fleisch")
+        self.assertIn("köcheln", conn.execute("SELECT notes FROM recipes WHERE id=?", (rid,)).fetchone()["notes"])
+
+    def test_instructions_name_all_columns_units_and_locations(self):
+        text = recipe_csv.ai_instructions()
+        for token in recipe_csv.COLUMNS + list(logic.UNITS) + list(logic.LOCATIONS):
+            self.assertIn(token, text)
+
+    def test_comma_delimiter_decimal_comma_and_unit_conversion(self):
+        text = 'Rezept,Zutat,Menge,Einheit\nSuppe,Wasser,"0,5",l\nSuppe,Salzkartoffeln,0.2,kg\n'
+        recipes, errors = recipe_csv.parse(text)
+        self.assertEqual(errors, [])
+        ings = {i["name"]: (i["qty"], i["unit"]) for i in recipes[0]["ingredients"]}
+        self.assertEqual(ings, {"Wasser": (500, "ml"), "Salzkartoffeln": (200, "g")})
+
+    def test_same_ingredient_twice_is_summed(self):
+        recipes, _ = recipe_csv.parse("rezept;zutat;menge;einheit\nA;Mehl;100;g\nA;mehl;50;g\n")
+        self.assertEqual([(i["qty"]) for i in recipes[0]["ingredients"]], [150])
+
+    def test_bad_recipe_is_skipped_others_import(self):
+        text = ("rezept;zutat;menge;einheit\nGut;Reis;80;g\nSchlecht;Reis;viel;g\nSchlecht;Ei;2;Stk\n"
+                "Auch schlecht;Ei;2;Eimer\n")
+        recipes, errors = recipe_csv.parse(text)
+        self.assertEqual([r["name"] for r in recipes], ["Gut"])
+        self.assertEqual(len(errors), 4)
+        self.assertTrue(any("Zeile 3" in e for e in errors))
+
+    def test_missing_column_and_empty_file(self):
+        for text in ("rezept;zutat\nA;B\n", "  \n"):
+            with self.assertRaises(recipe_csv.CsvError):
+                recipe_csv.parse(text)
+
+    def test_unit_mismatch_with_known_product_skips_recipe_without_side_effects(self):
+        conn = self.conn()
+        logic.create_product(conn, "Reis", "g", "Vorrat")
+        recipes, _ = recipe_csv.parse("rezept;zutat;menge;einheit\nPfanne;Paprika;1;Stk\nPfanne;Reis;2;Tasse\n")
+        res = recipe_csv.apply(conn, recipes)
+        self.assertEqual(res["created"], [])
+        self.assertTrue(res["errors"])
+        self.assertIsNone(logic.find_product(conn, "Paprika"))
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM recipes").fetchone()[0], 0)
+
+    def test_existing_recipe_skipped_or_overwritten(self):
+        conn = self.conn()
+        first, _ = recipe_csv.parse("rezept;zutat;menge;einheit\nA;Reis;80;g\n")
+        recipe_csv.apply(conn, first)
+        second, _ = recipe_csv.parse("rezept;zutat;menge;einheit\na;Reis;90;g\n")
+        self.assertEqual(recipe_csv.apply(conn, second)["skipped"], ["a"])
+        self.assertEqual(recipe_csv.apply(conn, second, overwrite=True)["updated"], ["a"])
+        rid = conn.execute("SELECT id FROM recipes").fetchone()["id"]
+        self.assertEqual(logic.ingredients(conn, rid)[0]["qty"], 90)
+
+    def test_encoding_fallback_for_excel_files(self):
+        raw = "rezept;zutat;menge;einheit\nKäsespätzle;Käse;100;g\n".encode("cp1252")
+        recipes, _ = recipe_csv.parse(recipe_csv.decode(raw))
+        self.assertEqual(recipes[0]["name"], "Käsespätzle")
+
+
+class RecipeCsvWebTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.app = create_app({"TESTING": True, "DATABASE_PATH": os.path.join(tmp, "w.db"), "START_SYNC": False,
+                               "APP_PASSWORD": "geheim", "SESSION_COOKIE_SECURE": False})
+        self.c = self.app.test_client()
+        self.c.post("/registrieren", data={"name": "ich", "password": "langespasswort", "claim_password": "geheim"})
+
+    def test_downloads_and_upload(self):
+        import io
+        page = self.c.get("/rezepte/import")
+        self.assertEqual(page.status_code, 200)
+        tpl = self.c.get("/rezepte/vorlage.csv")
+        self.assertIn("text/csv", tpl.content_type)
+        self.assertIn("attachment", tpl.headers["Content-Disposition"])
+        self.assertEqual(self.c.get("/rezepte/ki-anleitung.txt").status_code, 200)
+        r = self.c.post("/rezepte/import", data={"datei": (io.BytesIO(
+            b"rezept;zutat;menge;einheit\nTestgericht Neu;Reis;80;g\n"), "x.csv")},
+            content_type="multipart/form-data")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Testgericht Neu", r.get_data(as_text=True))
+        self.assertIn("Testgericht Neu", self.c.get("/rezepte").get_data(as_text=True))
+        bad = self.c.post("/rezepte/import", data={"datei": (io.BytesIO(b"a;b\n1;2\n"), "x.csv")},
+                          content_type="multipart/form-data")
+        self.assertIn("fehlen die Spalten", bad.get_data(as_text=True))
+
+    def test_import_requires_login(self):
+        self.assertEqual(self.app.test_client().get("/rezepte/import").status_code, 302)
 
 
 if __name__ == "__main__":

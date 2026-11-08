@@ -33,7 +33,8 @@ python -m pytest -q
    Das `Dockerfile` und `railway.toml` werden automatisch verwendet.
 2. Im Service **Volume hinzufügen**, Mount-Pfad **`/data`**.
 3. Unter *Variables* setzen:
-   - `APP_PASSWORD` – langes Passwort
+   - `APP_PASSWORD` – langes Passwort; wer die bestehenden Daten übernehmen will, trägt es einmalig beim
+     Registrieren unter „Bisheriges App-Passwort“ ein (danach legt jeder sein Konto mit eigenem Passwort an)
    - `SECRET_KEY` – `python -c "import secrets; print(secrets.token_hex(32))"`
    - optional `ROTATION_START` (ein Montag, der als Rotationswoche 1 zählt)
    - optional die `KEEP_*`-Variablen (siehe unten)
@@ -71,3 +72,15 @@ Container + wenige MB Volume) sollte im inkludierten Kontingent bleiben.
 ## Weiterentwickeln
 
 Siehe `CLAUDE.md` – dort stehen Architektur, Kernregeln und die Roadmap für Claude Code.
+
+## Benutzer, Vorratsschränke und Rezept-Import
+
+- **Konto anlegen** (`/registrieren`): Ohne weitere Angabe bekommt jeder Benutzer einen eigenen, leeren
+  Vorratsschrank (auf Wunsch mit Beispieldaten). Unter *Beitrittscode* trägt man den Code eines
+  bestehenden Schranks ein und arbeitet dann gemeinsam mit den anderen Mitgliedern an Vorrat, Plan und Einkaufsliste.
+- **Haushalt** (Link oben auf jeder Seite): Mitglieder, Beitrittscode zum Einladen (Besitzer können ihn
+  erneuern), Umbenennen, anderem Schrank beitreten, Schrank verlassen, Abmelden.
+- **Rezepte importieren** (Rezepte → *Rezepte importieren*): CSV-Vorlage und eine fertige Anleitung für die eigene KI
+  herunterladen, die KI die Datei nach Wunsch füllen lassen, hochladen.
+- Daten: jede Schrank-Datenbank liegt unter `DATA_DIR` (`vorrat.db` = der bisherige Schrank,
+  `households/<id>.db` die weiteren), dazu `accounts.db`. Der Google-Keep-Sync gilt nur für den bisherigen Schrank.
