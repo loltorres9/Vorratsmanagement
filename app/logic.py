@@ -107,6 +107,40 @@ def rotation_recipe(conn, d: date):
     return (row["recipe_id"] if row else None), week
 
 
+def build_rotation(conn, rng=None) -> tuple:
+    """Verteilt alle aktiven Gerichte (kind meal) auf eine neue Rotation und ersetzt die alte.
+
+    Wochen = aufgerundet (Gerichte / 7), jede Woche hat 7 Tage; bleiben Plätze übrig, wiederholen sich
+    Gerichte. Woche 1 ist die aktuelle Woche. Noch nicht gekochte Tage ab heute werden verworfen und
+    aus der neuen Rotation neu gefüllt; Gekochtes bleibt. Liefert (Wochen, Gerichte).
+    Wirft ValueError, wenn es kein aktives Gericht gibt."""
+    import random
+    rng = rng or random.Random()
+    ids = [r["id"] for r in conn.execute("SELECT id FROM recipes WHERE kind = 'meal' AND active = 1 ORDER BY name")]
+    if not ids:
+        raise ValueError("Es gibt kein aktives Gericht, das in die Rotation passt.")
+    weeks = math.ceil(len(ids) / 7)
+    order = ids[:]
+    rng.shuffle(order)
+    slots = weeks * 7
+    order += rng.sample(ids, min(len(ids), slots - len(order))) if len(order) < slots else []
+    while len(order) < slots:  # weniger als 7 Gerichte: durchlaufend wiederholen
+        order.append(ids[len(order) % len(ids)])
+    conn.execute("DELETE FROM rotation")
+    conn.executemany("INSERT INTO rotation(week, weekday, recipe_id) VALUES(?,?,?)",
+                     [(i // 7 + 1, i % 7, rid) for i, rid in enumerate(order)])
+    db.set_setting(conn, "rotation_weeks", weeks)
+    db.set_setting(conn, "rotation_start", monday_of(today()).isoformat())
+    conn.execute("DELETE FROM meal_plan WHERE status = 'planned' AND date >= ?", (today().isoformat(),))
+    conn.commit()
+    ensure_plan(conn, days=21)
+    return weeks, len(ids)
+
+
+def rotation_size(conn) -> int:
+    return conn.execute("SELECT COUNT(*) FROM rotation").fetchone()[0]
+
+
 def ensure_plan(conn, start: date | None = None, days: int = 14):
     """Füllt fehlende Tage aus der Rotation auf. Bestehende Einträge bleiben unangetastet."""
     start = start or today()

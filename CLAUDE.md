@@ -107,8 +107,9 @@ Lokale DB zurücksetzen: `rm -rf data/` (wird beim Start neu aus seed.json befü
 8. Optional: Rotation in der UI bearbeiten, Gerichte tauschen, „Reste“-Vorschläge.
 
 ## Bekannte Grenzen
-- Neue Schränke haben keine Rotation: Importierte Rezepte sind aktiv, liegen aber erst im Plan, wenn sie dort
-  auf einen Tag gelegt werden (Idee: Rotation aus aktiven Rezepten erzeugen).
+- Neue Schränke und Schränke nach dem Rezept-Import mit „alles löschen“ haben keine Rotation: Auf der Plan-Seite
+  erzeugt „Rotation aus aktiven Rezepten erzeugen“ (`logic.build_rotation`) sie zufällig verteilt neu
+  (Wochen = aktive Gerichte / 7 aufgerundet, Woche 1 = diese Woche). Bearbeiten der Rotation per UI gibt es noch nicht.
 - Benutzer können nicht aus einem Schrank entfernt werden (Beitrittscode neu erzeugen sperrt nur Neue aus).
 - Gewürze, Salz, Pfeffer werden bewusst nicht getrackt.
 - Mengen in seed.json sind Schätzwerte für 1 Portion – der Nutzer wird sie anpassen.
