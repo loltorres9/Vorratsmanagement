@@ -8,6 +8,7 @@
 
 {% if result %}
 <section class="flash" role="status">
+  {% if result.deleted is not none %}<p>{{ result.deleted }} bisherige Rezepte gelöscht.</p>{% endif %}
   <p><strong>{{ result.created|length }} neu</strong>{% if result.updated %}, {{ result.updated|length }} überschrieben{% endif %}{% if result.skipped %}, {{ result.skipped|length }} übersprungen{% endif %}.</p>
   {% if result.created %}<p>Neu: {{ result.created|join(", ") }}</p>{% endif %}
   {% if result.updated %}<p>Überschrieben: {{ result.updated|join(", ") }}</p>{% endif %}
@@ -34,6 +35,12 @@
   <form method="post" enctype="multipart/form-data" class="stack">
     <input type="file" name="datei" accept=".csv,text/csv,text/plain" required aria-label="CSV-Datei">
     <label class="check"><input type="checkbox" name="overwrite" value="1"> Vorhandene Rezepte mit gleichem Namen überschreiben</label>
+    <fieldset class="choice">
+      <legend>Alte Rezepte ersetzen</legend>
+      <label class="check"><input type="checkbox" name="replace_all" value="1"> Alle bisherigen Rezepte vorher löschen</label>
+      <label>Zur Bestätigung LÖSCHEN eintippen <input name="confirm" autocomplete="off"></label>
+      <p class="sub">Gelöscht werden Rezepte, Rotation und Plan. Vorrat, Zutaten und Einkaufsliste bleiben. Vorkoch-Rezepte, aus denen ein Produkt selbst gemacht wird (z. B. Gulasch), bleiben ebenfalls. Bei Fehlern in der Datei wird nichts gelöscht.</p>
+    </fieldset>
     <button class="primary">Importieren</button>
   </form>
   <p class="sub">Unbekannte Zutaten werden neu angelegt, bekannte behalten Einheit und Lagerort. Ein Rezept mit Fehler wird ganz ausgelassen und unten genannt; die anderen kommen trotzdem hinein. Neue Rezepte sind aktiv, aber noch nicht in der Rotation – im Plan lassen sie sich auf einen Tag legen.</p>

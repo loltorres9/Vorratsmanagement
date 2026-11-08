@@ -31,6 +31,9 @@ Gehostet auf **Railway** (Docker, SQLite auf Volume). Sprache der Oberfläche: D
 app/__init__.py     create_app(), alle Routen
 app/accounts.py     Benutzer, Schränke, Beitrittscodes (accounts.db, ohne Flask)
 app/recipe_csv.py   CSV-Import von Rezepten, Vorlage und KI-Anleitung (ohne Flask)
+                    Spalte `aktiv` (ja/nein) je Rezept; Import kann alle alten Rezepte vorher löschen
+                    (`logic.delete_all_recipes`: behält Batch-Rezepte hinter selbstgemachten Produkten, nur nach Bestätigung
+                    und nur wenn die Datei fehlerfrei ist)
 app/db.py           Schema (SCHEMA), connect(), Settings-Helfer
 app/logic.py        Kernlogik: Plan, Bedarf, Einkaufsliste, Bestand
 app/keep_sync.py    Google-Keep-Abgleich (sync_list ist rein und testbar)

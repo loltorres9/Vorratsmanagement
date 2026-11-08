@@ -733,5 +733,63 @@ class RecipeCsvWebTest(unittest.TestCase):
         self.assertEqual(self.app.test_client().get("/rezepte/import").status_code, 302)
 
 
+class RecipeCsvActiveAndReplaceTest(unittest.TestCase):
+    def test_active_column(self):
+        recipes, errors = recipe_csv.parse(
+            "rezept;zutat;menge;einheit;aktiv\nA;Reis;80;g;nein\nA;Ei;1;Stk;\nB;Reis;80;g;\nC;Reis;80;g;ja\n")
+        self.assertEqual(errors, [])
+        self.assertEqual({r["name"]: r["active"] for r in recipes}, {"A": False, "B": True, "C": True})
+        _, errors = recipe_csv.parse("rezept;zutat;menge;einheit;aktiv\nA;Reis;80;g;vielleicht\n")
+        self.assertTrue(errors)
+        conn = fresh_conn()
+        recipe_csv.apply(conn, recipes)
+        act = {r["name"]: r["active"] for r in conn.execute("SELECT name, active FROM recipes WHERE name IN ('A','B','C')")}
+        self.assertEqual(act, {"A": 0, "B": 1, "C": 1})
+
+    def test_delete_all_keeps_batch_behind_made_product(self):
+        conn = fresh_conn()
+        logic.ensure_plan(conn, MONDAY, 14)
+        kept = {r[0] for r in conn.execute("SELECT made_by_recipe_id FROM products WHERE made_by_recipe_id IS NOT NULL")}
+        self.assertTrue(kept)
+        n = logic.delete_all_recipes(conn)
+        self.assertGreater(n, 30)
+        self.assertEqual({r["id"] for r in conn.execute("SELECT id FROM recipes")}, kept)
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM rotation").fetchone()[0], 0)
+        self.assertEqual(conn.execute("SELECT COUNT(*) FROM meal_plan").fetchone()[0], 0)
+        self.assertGreater(conn.execute("SELECT COUNT(*) FROM products").fetchone()[0], 10)
+
+
+class RecipeCsvReplaceWebTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.app = create_app({"TESTING": True, "DATABASE_PATH": os.path.join(tmp, "w.db"), "START_SYNC": False,
+                               "APP_PASSWORD": "geheim", "SESSION_COOKIE_SECURE": False})
+        self.c = self.app.test_client()
+        self.c.post("/registrieren", data={"name": "ich", "password": "langespasswort", "claim_password": "geheim"})
+        self.db = db.connect(self.app.config["DATABASE_PATH"])
+
+    def upload(self, text, **form):
+        import io
+        data = {"datei": (io.BytesIO(text.encode("utf-8")), "x.csv"), **form}
+        return self.c.post("/rezepte/import", data=data, content_type="multipart/form-data")
+
+    def count(self):
+        return self.db.execute("SELECT COUNT(*) FROM recipes WHERE kind='meal'").fetchone()[0]
+
+    def test_replace_needs_confirmation_and_valid_file(self):
+        before = self.count()
+        good = "rezept;zutat;menge;einheit\nNeu;Reis;80;g\n"
+        self.upload(good, replace_all="1")  # ohne Bestätigung
+        self.assertEqual(self.count(), before)
+        self.upload("rezept;zutat;menge;einheit\nKaputt;Reis;viel;g\n", replace_all="1", confirm="LÖSCHEN")
+        self.assertEqual(self.count(), before)  # fehlerhafte Datei löscht nichts
+        self.upload("rezept;zutat;menge;einheit\nUnpassend;Reis;1;Stk\n", replace_all="1", confirm="LÖSCHEN")
+        self.assertEqual(self.count(), before)  # Einheit passt nicht zu vorhandener Zutat
+        r = self.upload(good, replace_all="1", confirm="löschen")
+        self.assertIn("gelöscht", r.get_data(as_text=True))
+        self.assertEqual(self.count(), 1)
+        self.assertEqual(self.db.execute("SELECT name FROM recipes WHERE kind='meal'").fetchone()["name"], "Neu")
+
+
 if __name__ == "__main__":
     unittest.main()

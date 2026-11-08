@@ -190,6 +190,20 @@ def update_recipe(conn, recipe_id, name, notes, ingredients, yields_qty=None, se
     conn.commit()
 
 
+def delete_all_recipes(conn) -> int:
+    """Löscht alle Rezepte samt Rotation und Plan-Einträgen. Rezepte, aus denen ein Produkt
+    selbst gemacht wird (made_by_recipe_id, z. B. das Gulasch-Batch), bleiben, sonst verlöre
+    das Produkt seine Herkunft. Bestand, Zutaten und Einkaufsliste bleiben unberührt.
+    Liefert die Zahl der gelöschten Rezepte."""
+    keep = {r[0] for r in conn.execute("SELECT made_by_recipe_id FROM products WHERE made_by_recipe_id IS NOT NULL")}
+    ids = [(r["id"],) for r in conn.execute("SELECT id FROM recipes") if r["id"] not in keep]
+    conn.executemany("DELETE FROM rotation WHERE recipe_id = ?", ids)
+    conn.executemany("DELETE FROM meal_plan WHERE recipe_id = ?", ids)
+    conn.executemany("DELETE FROM recipes WHERE id = ?", ids)
+    conn.commit()
+    return len(ids)
+
+
 def cook_recipe(conn, recipe_id, portions=1.0, reason=None):
     """Zieht Zutaten ab; Batch-Rezepte buchen das Ergebnis (z.B. 4 Gulasch-Portionen) ein."""
     r = conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()

@@ -553,9 +553,25 @@ def create_app(test_config=None):
                 flash("Bitte eine CSV-Datei auswählen.")
             else:
                 try:
+                    conn = get_conn()
                     recipes_, errors = recipe_csv.parse(recipe_csv.decode(f.read()))
-                    result = recipe_csv.apply(get_conn(), recipes_, overwrite=request.form.get("overwrite") == "1")
+                    deleted = None
+                    if request.form.get("replace_all") == "1":
+                        blocked = [f"{r['name']}: {m}" for r in recipes_ for m in recipe_csv.problems(conn, r)]
+                        if request.form.get("confirm", "").strip().upper() != "LÖSCHEN":
+                            flash("Zum Löschen bitte LÖSCHEN eintippen. Es wurde nichts verändert.")
+                            return render_template("rezepte_import.html", result=None, columns=recipe_csv.COLUMNS,
+                                                   instructions=recipe_csv.ai_instructions())
+                        if not recipes_ or blocked:
+                            result = {"created": [], "updated": [], "skipped": [], "deleted": None,
+                                      "errors": errors + blocked + ["Nichts gelöscht und nichts importiert: "
+                                                                    "erst die Fehler in der Datei beheben."]}
+                            return render_template("rezepte_import.html", result=result, columns=recipe_csv.COLUMNS,
+                                                   instructions=recipe_csv.ai_instructions())
+                        deleted = logic.delete_all_recipes(conn)
+                    result = recipe_csv.apply(conn, recipes_, overwrite=request.form.get("overwrite") == "1")
                     result["errors"] = errors + result["errors"]
+                    result["deleted"] = deleted
                 except recipe_csv.CsvError as e:
                     flash(str(e))
         return render_template("rezepte_import.html", result=result, columns=recipe_csv.COLUMNS,
