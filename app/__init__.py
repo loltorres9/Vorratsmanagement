@@ -347,7 +347,22 @@ def create_app(test_config=None):
             (logic.today().isoformat(),),
         ).fetchall()
         _, week = logic.rotation_recipe(conn, logic.today())
-        return render_template("plan.html", days=logic.plan(conn, days=21), recipes=recipes, week=week)
+        return render_template("plan.html", days=logic.plan(conn, days=21), recipes=recipes, week=week,
+                               has_rotation=logic.rotation_size(conn) > 0)
+
+    @app.post("/plan/rotation")
+    @login_required
+    def plan_rotation():
+        conn = get_conn()
+        if logic.rotation_size(conn) and request.form.get("replace") != "1":
+            flash("Es gibt schon eine Rotation. Zum Ersetzen bitte den Haken setzen.")
+            return redirect(url_for("plan_view"))
+        try:
+            weeks, n = logic.build_rotation(conn)
+            flash(f"Neue Rotation: {n} aktive Gerichte auf {weeks} Wochen verteilt.")
+        except ValueError as e:
+            flash(str(e))
+        return redirect(url_for("plan_view"))
 
     @app.post("/plan/<d>/cook")
     @login_required

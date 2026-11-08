@@ -791,5 +791,63 @@ class RecipeCsvReplaceWebTest(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT name FROM recipes WHERE kind='meal'").fetchone()["name"], "Neu")
 
 
+class BuildRotationTest(unittest.TestCase):
+    def setUp(self):
+        self.conn = fresh_conn()
+        self.old_today = logic.today
+        logic.today = lambda: MONDAY
+
+    def tearDown(self):
+        logic.today = self.old_today
+
+    def test_empty_rotation_gets_all_active_recipes_and_fills_plan(self):
+        import random
+        logic.delete_all_recipes(self.conn)
+        recipe_csv.apply(self.conn, recipe_csv.parse(
+            "rezept;zutat;menge;einheit;aktiv\n" + "".join(
+                f"R{i};Reis;80;g;{'nein' if i == 9 else 'ja'}\n" for i in range(1, 11)))[0])
+        weeks, n = logic.build_rotation(self.conn, random.Random(1))
+        self.assertEqual((weeks, n), (2, 9))  # 9 aktive Gerichte -> 2 Wochen = 14 Plätze
+        self.assertEqual(logic.rotation_size(self.conn), 14)
+        used = {r[0] for r in self.conn.execute("SELECT recipe_id FROM rotation")}
+        self.assertEqual(len(used), 9)
+        inactive = self.conn.execute("SELECT id FROM recipes WHERE name='R9'").fetchone()["id"]
+        self.assertNotIn(inactive, used)
+        self.assertEqual(int(db.get_setting(self.conn, "rotation_weeks")), 2)
+        self.assertEqual(len(logic.plan(self.conn, MONDAY, 14)), 14)
+
+    def test_replace_keeps_cooked_days_and_needs_active_recipe(self):
+        logic.ensure_plan(self.conn, MONDAY, 7)
+        logic.mark_cooked(self.conn, MONDAY.isoformat())
+        cooked = self.conn.execute("SELECT recipe_id FROM meal_plan WHERE date=?", (MONDAY.isoformat(),)).fetchone()[0]
+        logic.build_rotation(self.conn)
+        row = self.conn.execute("SELECT recipe_id, status FROM meal_plan WHERE date=?", (MONDAY.isoformat(),)).fetchone()
+        self.assertEqual((row["recipe_id"], row["status"]), (cooked, "cooked"))
+        self.conn.execute("UPDATE recipes SET active = 0")
+        with self.assertRaises(ValueError):
+            logic.build_rotation(self.conn)
+
+    def test_web_button(self):
+        tmp = tempfile.mkdtemp()
+        app = create_app({"TESTING": True, "DATABASE_PATH": os.path.join(tmp, "w.db"), "START_SYNC": False,
+                          "APP_PASSWORD": "geheim", "SESSION_COOKIE_SECURE": False})
+        c = app.test_client()
+        c.post("/registrieren", data={"name": "ich", "password": "langespasswort", "claim_password": "geheim"})
+        conn = db.connect(app.config["DATABASE_PATH"])
+        logic.delete_all_recipes(conn)
+        c.post("/rezepte/import", data={"datei": (__import__("io").BytesIO(
+            b"rezept;zutat;menge;einheit\nA;Reis;80;g\nB;Reis;80;g\n"), "x.csv")}, content_type="multipart/form-data")
+        self.assertEqual(logic.rotation_size(conn), 0)
+        self.assertIn("keine Rotation", c.get("/plan").get_data(as_text=True))
+        c.post("/plan/rotation")
+        self.assertEqual(logic.rotation_size(conn), 7)
+        self.assertGreater(len(logic.plan(conn, logic.today(), 7)), 0)
+        before = [tuple(r) for r in conn.execute("SELECT * FROM rotation ORDER BY week, weekday")]
+        c.post("/plan/rotation")  # ohne Haken: nichts passiert
+        self.assertEqual(before, [tuple(r) for r in conn.execute("SELECT * FROM rotation ORDER BY week, weekday")])
+        c.post("/plan/rotation", data={"replace": "1"})
+        self.assertEqual(logic.rotation_size(conn), 7)
+
+
 if __name__ == "__main__":
     unittest.main()
