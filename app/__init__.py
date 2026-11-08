@@ -4,10 +4,12 @@ import logging
 import os
 from datetime import date, timedelta
 from functools import wraps
+from pathlib import Path
 
-from flask import Flask, flash, g, redirect, render_template, request, send_from_directory, session, url_for
+from flask import (Flask, Response, flash, g, redirect, render_template, request, send_from_directory,
+                   session, url_for)
 
-from . import db, keep_sync, logic, seed
+from . import accounts, db, keep_sync, logic, recipe_csv, seed
 
 WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 WEEKDAYS_LONG = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
@@ -25,15 +27,63 @@ def create_app(test_config=None):
         SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "1") == "1",
         PERMANENT_SESSION_LIFETIME=timedelta(days=90),
         START_SYNC=True,
+        ACCOUNTS_PATH=None,
+        MAX_CONTENT_LENGTH=2 * 1024 * 1024,
     )
     if test_config:
         app.config.update(test_config)
 
     if not app.config["APP_PASSWORD"]:
-        app.logger.warning("APP_PASSWORD ist nicht gesetzt – Login ist deaktiviert (nur lokal verwenden!)")
+        app.logger.warning("APP_PASSWORD ist nicht gesetzt – der erste Benutzer übernimmt den bestehenden "
+                           "Vorratsschrank ohne Nachweis (nur lokal verwenden!)")
+
+    def legacy_db_path():
+        return app.config["DATABASE_PATH"] or db.db_path()
 
     def make_conn():
-        return db.connect(app.config["DATABASE_PATH"])
+        """Datenbank des bisherigen Schranks (Haushalt 1); der Keep-Sync läuft nur dort."""
+        return db.connect(legacy_db_path())
+
+    def household_path(hid):
+        if hid == accounts.LEGACY_ID:
+            return legacy_db_path()
+        d = Path(legacy_db_path()).parent / "households"
+        d.mkdir(parents=True, exist_ok=True)
+        return d / f"{hid}.db"
+
+    def accounts_path():
+        return app.config["ACCOUNTS_PATH"] or Path(legacy_db_path()).parent / "accounts.db"
+
+    def make_aconn():
+        return accounts.connect(accounts_path())
+
+    def prepare_household(hid, sample=False):
+        """Schema anlegen/nachrüsten; der bisherige Schrank bekommt wie früher Startdaten und Rezeptimport,
+        ein neuer nur auf Wunsch die Beispieldaten."""
+        conn = db.connect(household_path(hid))
+        db.init(conn)
+        if hid == accounts.LEGACY_ID:
+            if seed.ensure_seeded(conn):
+                app.logger.warning("Leere Datenbank: Startdaten geladen (neue Datenbank, prüfe das Volume unter /data)")
+            # Einmalig (Merker in settings); in der App bearbeitete Rezepte bleiben unberührt.
+            if seed.apply_recipe_import(conn):
+                app.logger.info("Rezepte aus dem Rezeptordner übernommen")
+        elif sample and seed.is_empty(conn):
+            seed.load(conn)
+            seed.apply_recipe_import(conn)
+        logic.ensure_plan(conn)
+        conn.close()
+
+    def drop_household(hid):
+        """Löscht einen leeren Schrank samt Datenbankdatei (nie den bisherigen Schrank)."""
+        if hid == accounts.LEGACY_ID:
+            return
+        aconn = make_aconn()
+        accounts.delete_household(aconn, hid)
+        aconn.close()
+        base = household_path(hid)
+        for suffix in ("", "-wal", "-shm"):
+            Path(str(base) + suffix).unlink(missing_ok=True)
 
     if not db.storage_is_persistent():
         app.logger.error(
@@ -41,39 +91,68 @@ def create_app(test_config=None):
             "In Railway ein Volume an diesen Pfad hängen. Details: %s", db.data_dir(), db.storage_info())
 
     with app.app_context():
-        conn = make_conn()
-        db.init(conn)
-        if seed.ensure_seeded(conn):
-            app.logger.warning("Leere Datenbank: Startdaten geladen (neue Datenbank, prüfe das Volume unter /data)")
-        # Einmalig (Merker in settings); in der App bearbeitete Rezepte bleiben unberührt.
-        if seed.apply_recipe_import(conn):
-            app.logger.info("Rezepte aus dem Rezeptordner übernommen")
-        logic.ensure_plan(conn)
-        conn.close()
+        aconn = make_aconn()
+        accounts.init(aconn)
+        accounts.ensure_legacy_household(aconn)
+        hids = [h["id"] for h in accounts.all_households(aconn)]
+        aconn.close()
+        for hid in hids:
+            prepare_household(hid)
 
     if app.config["START_SYNC"]:
         keep_sync.start_background(make_conn)
 
     # ------------------------------------------------------------- Infrastruktur
 
+    def get_aconn():
+        if "aconn" not in g:
+            g.aconn = make_aconn()
+        return g.aconn
+
     def get_conn():
+        """Datenbank des Vorratsschranks des angemeldeten Benutzers."""
         if "conn" not in g:
-            g.conn = make_conn()
+            g.conn = db.connect(household_path(g.household["id"]))
         return g.conn
 
     @app.teardown_appcontext
-    def close_conn(exc):
-        c = g.pop("conn", None)
-        if c is not None:
-            c.close()
+    def close_conns(exc):
+        for key in ("conn", "aconn"):
+            c = g.pop(key, None)
+            if c is not None:
+                c.close()
+
+    @app.before_request
+    def load_user():
+        g.user = g.household = None
+        uid = session.get("uid")
+        if uid:
+            user = accounts.get_user(get_aconn(), uid)
+            if user:
+                g.user = user
+                g.household = accounts.get_household(get_aconn(), user["household_id"])
+            else:
+                session.clear()
 
     def login_required(view):
         @wraps(view)
         def wrapped(*a, **kw):
-            if app.config["APP_PASSWORD"] and not session.get("ok"):
+            if g.user is None:
                 return redirect(url_for("login", next=request.path))
             return view(*a, **kw)
         return wrapped
+
+    def owner_required(view):
+        @wraps(view)
+        def wrapped(*a, **kw):
+            if g.user["role"] != "owner":
+                flash("Das darf nur der Besitzer des Vorratsschranks.")
+                return redirect(url_for("household_view"))
+            return view(*a, **kw)
+        return login_required(wrapped)
+
+    def is_keep_household():
+        return g.household is not None and g.household["id"] == accounts.LEGACY_ID
 
     @app.context_processor
     def helpers():
@@ -94,7 +173,9 @@ def create_app(test_config=None):
             "units": logic.UNITS,
             "locations": logic.LOCATIONS,
             "day_label": day_label,
-            "keep_enabled": keep_sync.enabled(),
+            "keep_enabled": keep_sync.enabled() and is_keep_household(),
+            "user": g.user,
+            "household": g.household,
             "nav": request.endpoint,
             "storage_warning": not db.storage_is_persistent(),
             "storage_info": db.storage_info(),
@@ -102,27 +183,131 @@ def create_app(test_config=None):
 
     @app.get("/healthz")
     def healthz():
-        get_conn().execute("SELECT 1")
+        get_aconn().execute("SELECT 1")
         return {"ok": True, **db.storage_info()}
 
     # --------------------------------------------------------------------- Login
 
+    def safe_next(default="/"):
+        nxt = request.args.get("next", default)
+        return nxt if nxt.startswith("/") and not nxt.startswith("//") else default
+
+    def start_session(uid):
+        session.clear()
+        session.permanent = True
+        session["uid"] = uid
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
-            pw = request.form.get("password", "")
-            if app.config["APP_PASSWORD"] and hmac.compare_digest(pw, app.config["APP_PASSWORD"]):
-                session.permanent = True
-                session["ok"] = True
-                nxt = request.args.get("next", "/")
-                return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else "/")
-            flash("Passwort stimmt nicht.")
+            user = accounts.authenticate(get_aconn(), request.form.get("name"), request.form.get("password"))
+            if user:
+                start_session(user["id"])
+                return redirect(safe_next())
+            flash("Name oder Passwort stimmt nicht.")
         return render_template("login.html")
+
+    @app.route("/registrieren", methods=["GET", "POST"])
+    def register():
+        aconn = get_aconn()
+        claimable = not accounts.is_claimed(aconn)  # bisheriger Schrank noch ohne Benutzer
+        if request.method == "POST":
+            f = request.form
+            name, password = f.get("name", ""), f.get("password", "")
+            mode = f.get("mode", "new")
+            try:
+                claim = f.get("claim_password", "")
+                if mode == "join":
+                    target = accounts.find_by_code(aconn, f.get("join_code"))
+                    if not target:
+                        raise ValueError("Diesen Beitrittscode gibt es nicht.")
+                    uid = accounts.create_user(aconn, name, password, target["id"], "member")
+                elif claimable and (claim or not app.config["APP_PASSWORD"]):
+                    if app.config["APP_PASSWORD"] and not hmac.compare_digest(claim, app.config["APP_PASSWORD"]):
+                        raise ValueError("Das bisherige App-Passwort stimmt nicht.")
+                    uid = accounts.create_user(aconn, name, password, accounts.LEGACY_ID, "owner")
+                else:
+                    hid = accounts.create_household(
+                        aconn, f.get("household_name") or f"Vorratsschrank von {name.strip()}")
+                    try:
+                        uid = accounts.create_user(aconn, name, password, hid, "owner")
+                    except ValueError:
+                        accounts.delete_household(aconn, hid)
+                        raise
+                    prepare_household(hid, sample=f.get("sample") == "1")
+                start_session(uid)
+                return redirect(url_for("index"))
+            except ValueError as e:
+                flash(str(e))
+        return render_template("registrieren.html", claimable=claimable and bool(app.config["APP_PASSWORD"]),
+                               form=request.form)
 
     @app.post("/logout")
     def logout():
         session.clear()
         return redirect(url_for("login"))
+
+    # ------------------------------------------------------ Benutzer und Vorratsschränke
+
+    @app.get("/haushalt")
+    @login_required
+    def household_view():
+        aconn = get_aconn()
+        members = accounts.members(aconn, g.household["id"])
+        return render_template("haushalt.html", members=members, code=accounts.show_code(g.household["join_code"]),
+                               is_owner=g.user["role"] == "owner", sole=len(members) == 1)
+
+    @app.post("/haushalt/name")
+    @owner_required
+    def household_rename():
+        try:
+            accounts.rename_household(get_aconn(), g.household["id"], request.form.get("name"))
+            flash("Name gespeichert.")
+        except ValueError as e:
+            flash(str(e))
+        return redirect(url_for("household_view"))
+
+    @app.post("/haushalt/code")
+    @owner_required
+    def household_new_code():
+        accounts.regenerate_code(get_aconn(), g.household["id"])
+        flash("Neuer Beitrittscode erzeugt. Der alte gilt nicht mehr.")
+        return redirect(url_for("household_view"))
+
+    @app.post("/haushalt/beitreten")
+    @login_required
+    def household_join():
+        aconn = get_aconn()
+        target = accounts.find_by_code(aconn, request.form.get("join_code"))
+        if not target:
+            flash("Diesen Beitrittscode gibt es nicht.")
+        elif target["id"] == g.household["id"]:
+            flash("Du bist schon in diesem Vorratsschrank.")
+        else:
+            sole = len(accounts.members(aconn, g.household["id"])) == 1
+            if sole and request.form.get("confirm") != "1":
+                flash("Bitte bestätigen, dass dein bisheriger Vorratsschrank gelöscht wird.")
+            else:
+                old = g.household["id"]
+                emptied = accounts.move_user(aconn, g.user["id"], target["id"])
+                if emptied:
+                    drop_household(old)
+                flash(f"Du bist jetzt im Vorratsschrank „{target['name']}“.")
+                return redirect(url_for("index"))
+        return redirect(url_for("household_view"))
+
+    @app.post("/haushalt/verlassen")
+    @login_required
+    def household_leave():
+        aconn = get_aconn()
+        if len(accounts.members(aconn, g.household["id"])) == 1:
+            flash("Du bist allein in diesem Vorratsschrank – es gibt nichts zu verlassen.")
+            return redirect(url_for("household_view"))
+        hid = accounts.create_household(aconn, request.form.get("name") or f"Vorratsschrank von {g.user['name']}")
+        accounts.move_user(aconn, g.user["id"], hid, "owner")
+        prepare_household(hid, sample=request.form.get("sample") == "1")
+        flash("Du hast jetzt einen eigenen, leeren Vorratsschrank.")
+        return redirect(url_for("index"))
 
     @app.get("/sw.js")
     def service_worker():
@@ -235,8 +420,9 @@ def create_app(test_config=None):
     @login_required
     def shopping_sync():
         conn = get_conn()
-        if not keep_sync.enabled():
-            flash("Google Keep ist nicht eingerichtet (KEEP_EMAIL / KEEP_MASTER_TOKEN fehlen).")
+        if not (keep_sync.enabled() and is_keep_household()):
+            flash("Google Keep ist nicht eingerichtet (KEEP_EMAIL / KEEP_MASTER_TOKEN fehlen) "
+                  "oder gehört zu einem anderen Vorratsschrank.")
         else:
             try:
                 s = keep_sync.run_once(conn)
@@ -356,6 +542,36 @@ def create_app(test_config=None):
         return render_template(
             "rezepte.html", recipes=[(r, logic.ingredients(conn, r["id"])) for r in rs]
         )
+
+    @app.route("/rezepte/import", methods=["GET", "POST"])
+    @login_required
+    def recipe_import():
+        result = None
+        if request.method == "POST":
+            f = request.files.get("datei")
+            if not f or not f.filename:
+                flash("Bitte eine CSV-Datei auswählen.")
+            else:
+                try:
+                    recipes_, errors = recipe_csv.parse(recipe_csv.decode(f.read()))
+                    result = recipe_csv.apply(get_conn(), recipes_, overwrite=request.form.get("overwrite") == "1")
+                    result["errors"] = errors + result["errors"]
+                except recipe_csv.CsvError as e:
+                    flash(str(e))
+        return render_template("rezepte_import.html", result=result, columns=recipe_csv.COLUMNS,
+                               instructions=recipe_csv.ai_instructions())
+
+    @app.get("/rezepte/vorlage.csv")
+    @login_required
+    def recipe_template():
+        return Response(recipe_csv.template_csv(), mimetype="text/csv",
+                        headers={"Content-Disposition": 'attachment; filename="rezepte-vorlage.csv"'})
+
+    @app.get("/rezepte/ki-anleitung.txt")
+    @login_required
+    def recipe_ai_instructions():
+        return Response(recipe_csv.ai_instructions(), mimetype="text/plain; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="rezepte-ki-anleitung.txt"'})
 
     @app.post("/rezepte/<int:rid>/cook")
     @login_required

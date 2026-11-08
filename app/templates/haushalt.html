@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Vorratsschrank – Vorrat{% endblock %}
+{% block content %}
+<header class="head">
+  <h1>{{ household.name }}</h1>
+  <p class="sub">Angemeldet als {{ user.name }}{% if is_owner %} (Besitzer){% endif %}. Alle Mitglieder bearbeiten denselben Vorrat, Plan und dieselbe Einkaufsliste.</p>
+</header>
+
+<section>
+  <h2>Mitglieder</h2>
+  <ul class="ings">
+    {% for m in members %}<li><span>{{ m.name }}</span><span>{{ 'Besitzer' if m.role == 'owner' else 'Mitglied' }}</span></li>{% endfor %}
+  </ul>
+</section>
+
+<section>
+  <h2>Mitglieder einladen</h2>
+  <p class="sub">Wer dieses Wort beim Anlegen des Kontos oder unter „Anderem Vorratsschrank beitreten“ eingibt, kommt in diesen Vorratsschrank.</p>
+  <p class="code" aria-label="Beitrittscode">{{ code }}</p>
+  {% if is_owner %}
+  <form method="post" action="{{ url_for('household_new_code') }}">
+    <button class="quiet">Neuen Code erzeugen</button>
+  </form>
+  {% endif %}
+</section>
+
+{% if is_owner %}
+<section>
+  <h2>Umbenennen</h2>
+  <form method="post" action="{{ url_for('household_rename') }}" class="addrow">
+    <input name="name" value="{{ household.name }}" maxlength="60" aria-label="Name des Vorratsschranks" required>
+    <button class="quiet">Speichern</button>
+  </form>
+</section>
+{% endif %}
+
+<section>
+  <h2>Anderem Vorratsschrank beitreten</h2>
+  <form method="post" action="{{ url_for('household_join') }}" class="stack">
+    <input name="join_code" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off" aria-label="Beitrittscode" required>
+    {% if sole %}
+    <label class="check"><input type="checkbox" name="confirm" value="1"> Mein bisheriger Vorratsschrank ist dann gelöscht (ich bin allein darin)</label>
+    {% endif %}
+    <button class="quiet">Beitreten</button>
+  </form>
+</section>
+
+{% if not sole %}
+<section>
+  <h2>Vorratsschrank verlassen</h2>
+  <p class="sub">Du bekommst einen eigenen, neuen Vorratsschrank. Die anderen behalten den bisherigen.</p>
+  <form method="post" action="{{ url_for('household_leave') }}" class="stack">
+    <label class="check"><input type="checkbox" name="sample" value="1"> Mit Beispieldaten starten</label>
+    <button class="quiet">Verlassen und eigenen anlegen</button>
+  </form>
+</section>
+{% endif %}
+
+<section>
+  <form method="post" action="{{ url_for('logout') }}"><button class="quiet">Abmelden</button></form>
+</section>
+{% endblock %}

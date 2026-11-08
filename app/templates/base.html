@@ -20,6 +20,9 @@
     Railway-Volume-Pfad = <code>{{ storage_info.railway_volume_mount_path or 'nicht gesetzt' }}</code>,
     eingehängt = {{ 'ja' if storage_info.is_mount else 'nein' }}</small></div>
   {% endif %}
+  {% if user %}
+  <div class="account"><a href="{{ url_for('household_view') }}">{{ household.name }} · {{ user.name }}</a></div>
+  {% endif %}
   <main class="page">
     {% with messages = get_flashed_messages() %}
       {% if messages %}
