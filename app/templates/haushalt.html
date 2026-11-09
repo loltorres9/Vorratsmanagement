@@ -39,7 +39,7 @@
   <form method="post" action="{{ url_for('household_join') }}" class="stack">
     <input name="join_code" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off" aria-label="Beitrittscode" required>
     {% if sole %}
-    <label class="check"><input type="checkbox" name="confirm" value="1"> Mein bisheriger Vorratsschrank ist dann gelöscht (ich bin allein darin)</label>
+    <label class="opt"><input type="checkbox" name="confirm" value="1"> Mein bisheriger Vorratsschrank ist dann gelöscht (ich bin allein darin)</label>
     {% endif %}
     <button class="quiet">Beitreten</button>
   </form>
@@ -50,7 +50,7 @@
   <h2>Vorratsschrank verlassen</h2>
   <p class="sub">Du bekommst einen eigenen, neuen Vorratsschrank. Die anderen behalten den bisherigen.</p>
   <form method="post" action="{{ url_for('household_leave') }}" class="stack">
-    <label class="check"><input type="checkbox" name="sample" value="1"> Mit Beispieldaten starten</label>
+    <label class="opt"><input type="checkbox" name="sample" value="1"> Mit Beispieldaten starten</label>
     <button class="quiet">Verlassen und eigenen anlegen</button>
   </form>
 </section>

@@ -999,5 +999,138 @@ class CoverageWebTest(unittest.TestCase):
         self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM meal_plan WHERE status='covered'").fetchone()[0], 0)
 
 
+class ShopDaysTest(unittest.TestCase):
+    """Im Plan wählen, für welche Tage eingekauft wird."""
+    def setUp(self):
+        self.conn = fresh_conn()
+        self.old_today = logic.today
+        logic.today = lambda: MONDAY
+        logic.ensure_plan(self.conn, MONDAY, 21)
+        self.d = [(MONDAY + timedelta(days=i)).isoformat() for i in range(21)]
+        self.conn.execute("UPDATE products SET min_stock = 0")  # der Mindestbestand gilt immer, hier stört er
+
+    def tearDown(self):
+        logic.today = self.old_today
+
+    def test_min_stock_is_still_bought_with_empty_selection(self):
+        reis = pid(self.conn, "Reis")
+        self.conn.execute("UPDATE products SET min_stock = 250 WHERE id = ?", (reis,))
+        logic.set_shop_days(self.conn, set())
+        got = {n["product_id"]: n["need"] for n in logic.compute_needs(self.conn)[0]}
+        self.assertEqual(got, {reis: 250})
+
+    def recipe(self, d):
+        return self.conn.execute("SELECT recipe_id FROM meal_plan WHERE date=?", (d,)).fetchone()[0]
+
+    def need_names(self):
+        return {n["name"]: n for n in logic.compute_needs(self.conn)[0]}
+
+    def test_auto_is_unchanged_until_a_choice_is_made(self):
+        self.assertIsNone(logic.selected_dates(self.conn))
+        self.assertEqual(logic.shop_selection(self.conn), set(self.d[:7]))
+        self.assertIn("Automatisch", logic.shop_summary(self.conn))
+        before = logic.compute_needs(self.conn)[0]
+        self.assertEqual(before, logic.compute_needs(self.conn)[0])
+
+    def test_only_chosen_days_are_bought(self):
+        logic.shop_next_days(self.conn, 1)
+        only = {i["id"]: i["per_portion"] for i in logic.ingredients(self.conn, self.recipe(self.d[0]))}
+        got = {n["product_id"]: n["need"] for n in logic.compute_needs(self.conn)[0]}
+        for pid_, q in only.items():
+            self.assertAlmostEqual(got[pid_], q, places=6)  # Bestand 0: genau die Menge eines Tages
+        self.assertEqual(set(got), set(only))
+        self.assertEqual(logic.shop_summary(self.conn), "Nach Auswahl im Plan: 1 Tag")
+
+    def test_non_consecutive_days_and_no_reserve(self):
+        logic.set_shop_days(self.conn, {self.d[0], self.d[3]})
+        want = {}
+        for d in (self.d[0], self.d[3]):
+            for i in logic.ingredients(self.conn, self.recipe(d)):
+                want[i["id"]] = want.get(i["id"], 0) + i["per_portion"]
+        got = {n["product_id"]: n["need"] for n in logic.compute_needs(self.conn)[0]}
+        self.assertEqual(set(got), set(want))
+        for k in want:
+            self.assertAlmostEqual(got[k], want[k], places=6)
+
+    def test_days_beyond_the_default_window_can_be_chosen(self):
+        day = next(d for d in self.d[8:] if not any(
+            i["made_by_recipe_id"] for i in logic.ingredients(self.conn, self.recipe(d))))  # ohne Selbstgemachtes
+        logic.set_shop_days(self.conn, {day})
+        want = {i["id"] for i in logic.ingredients(self.conn, self.recipe(day))}
+        self.assertEqual({n["product_id"] for n in logic.compute_needs(self.conn)[0]}, want)
+
+    def test_toggle_starts_from_the_automatic_selection(self):
+        logic.toggle_shop_day(self.conn, self.d[0], False)
+        sel = logic.shop_selection(self.conn)
+        self.assertEqual(sel, set(self.d[1:7]))
+        self.assertEqual(logic.shop_mode(self.conn), "custom")
+        logic.toggle_shop_day(self.conn, self.d[10], True)
+        self.assertEqual(logic.shop_selection(self.conn), set(self.d[1:7]) | {self.d[10]})
+        logic.shop_auto(self.conn)
+        self.assertEqual(logic.shop_mode(self.conn), "auto")
+        self.assertEqual(logic.shop_selection(self.conn), set(self.d[:7]))
+
+    def test_leftover_day_pulls_in_the_cooking_day(self):
+        logic.set_coverage(self.conn, self.d[0], 3)
+        logic.set_shop_days(self.conn, {self.d[2]})  # nur der letzte Reste-Tag gewählt
+        rid = self.recipe(self.d[0])
+        got = {n["product_id"]: n["need"] for n in logic.compute_needs(self.conn)[0]}
+        for i in logic.ingredients(self.conn, rid):
+            self.assertAlmostEqual(got[i["id"]], 3 * i["per_portion"], places=6)
+
+    def test_empty_selection_means_nothing_to_buy_and_refresh_clears_auto_items(self):
+        logic.refresh_shopping_list(self.conn)
+        self.assertTrue(logic.shopping_list(self.conn))
+        logic.set_shop_days(self.conn, set())
+        logic.refresh_shopping_list(self.conn)
+        self.assertEqual([r["name"] for r in logic.shopping_list(self.conn) if r["source"] == "auto"], [])
+
+    def test_new_plan_days_are_not_selected_in_custom_mode(self):
+        logic.set_shop_days(self.conn, {self.d[0]})
+        logic.ensure_plan(self.conn, MONDAY + timedelta(days=21), 3)
+        self.assertEqual(logic.shop_selection(self.conn), {self.d[0]})
+
+    def test_migration_adds_shop_column(self):
+        conn = db.connect(os.path.join(tempfile.mkdtemp(), "old.db"))
+        conn.execute("CREATE TABLE recipes (id INTEGER PRIMARY KEY, name TEXT, kind TEXT, "
+                     "yields_product_id INTEGER, yields_qty REAL, notes TEXT)")
+        conn.execute("CREATE TABLE meal_plan (date TEXT PRIMARY KEY, recipe_id INTEGER NOT NULL, "
+                     "portions REAL NOT NULL DEFAULT 1, status TEXT NOT NULL DEFAULT 'planned')")
+        db.migrate(conn)
+        self.assertIn("shop", {r["name"] for r in conn.execute("PRAGMA table_info(meal_plan)")})
+
+
+class ShopDaysWebTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.app = create_app({"TESTING": True, "DATABASE_PATH": os.path.join(tmp, "w.db"), "START_SYNC": False,
+                               "APP_PASSWORD": "geheim", "SESSION_COOKIE_SECURE": False})
+        self.c = self.app.test_client()
+        self.c.post("/registrieren", data={"name": "ich", "password": "langespasswort", "claim_password": "geheim"})
+        self.conn = db.connect(self.app.config["DATABASE_PATH"])
+        logic.ensure_plan(self.conn, days=14)
+
+    def test_presets_checkboxes_and_pages(self):
+        t = logic.today()
+        self.assertIn("Automatisch", self.c.get("/plan").get_data(as_text=True))
+        self.c.post("/plan/shop", data={"n": "3"})
+        self.assertEqual(logic.shop_selection(self.conn), {(t + timedelta(days=i)).isoformat() for i in range(3)})
+        page = self.c.get("/plan").get_data(as_text=True)
+        self.assertIn("Nach Auswahl im Plan: 3 Tage", page)
+        self.assertIn("Einkaufen", page)
+        three = {r["name"] for r in logic.shopping_list(self.conn)}
+        self.c.post("/plan/shop", data={"n": "10"})
+        ten = {r["name"] for r in logic.shopping_list(self.conn)}
+        self.assertTrue(three <= ten and three != ten)
+        d = (t + timedelta(days=4)).isoformat()
+        self.c.post(f"/plan/{d}/shop", data={"shop": "1"})  # angehakt
+        self.assertIn(d, logic.shop_selection(self.conn))
+        self.c.post(f"/plan/{d}/shop", data={})  # abgehakt: Feld fehlt
+        self.assertNotIn(d, logic.shop_selection(self.conn))
+        self.assertIn("Nach Auswahl", self.c.get("/einkauf").get_data(as_text=True))
+        self.c.post("/plan/shop", data={"n": "auto"})
+        self.assertEqual(logic.shop_mode(self.conn), "auto")
+
+
 if __name__ == "__main__":
     unittest.main()

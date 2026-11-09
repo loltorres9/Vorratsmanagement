@@ -34,10 +34,10 @@
   <h2>2. Datei hochladen</h2>
   <form method="post" enctype="multipart/form-data" class="stack">
     <input type="file" name="datei" accept=".csv,text/csv,text/plain" required aria-label="CSV-Datei">
-    <label class="check"><input type="checkbox" name="overwrite" value="1"> Vorhandene Rezepte mit gleichem Namen überschreiben</label>
+    <label class="opt"><input type="checkbox" name="overwrite" value="1"> Vorhandene Rezepte mit gleichem Namen überschreiben</label>
     <fieldset class="choice">
       <legend>Alte Rezepte ersetzen</legend>
-      <label class="check"><input type="checkbox" name="replace_all" value="1"> Alle bisherigen Rezepte vorher löschen</label>
+      <label class="opt"><input type="checkbox" name="replace_all" value="1"> Alle bisherigen Rezepte vorher löschen</label>
       <label>Zur Bestätigung LÖSCHEN eintippen <input name="confirm" autocomplete="off"></label>
       <p class="sub">Gelöscht werden Rezepte, Rotation und Plan. Vorrat, Zutaten und Einkaufsliste bleiben. Vorkoch-Rezepte, aus denen ein Produkt selbst gemacht wird (z. B. Gulasch), bleiben ebenfalls. Bei Fehlern in der Datei wird nichts gelöscht.</p>
     </fieldset>

@@ -157,7 +157,7 @@ input, select {
 /* Konten und Vorratsschränke */
 .account { max-width: 640px; margin: 0 auto; padding: .5rem 1rem 0; text-align: right; font-size: .85rem; }
 .account a { color: var(--muted); }
-.stack label.check, label.check { flex-direction: row; align-items: center; gap: .5rem; color: inherit; }
+label.opt, .stack label.opt { display: flex; flex-direction: row; align-items: center; gap: .5rem; color: inherit; }
 .choice { border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .8rem; display: flex; flex-direction: column; gap: .4rem; }
 .choice legend { color: var(--muted); padding: 0 .3rem; }
 .code { font-family: ui-monospace, monospace; font-size: 1.6rem; letter-spacing: .15em; margin: .4rem 0; }
@@ -175,3 +175,9 @@ textarea[readonly] { width: 100%; font: inherit; font-size: .85rem; }
 .planrow select.days-select { flex: none; width: 6.2rem; margin-left: 0; }
 .planrow select[name="recipe_id"] { flex: 1 1 9rem; }
 .planrow .rest { flex: 1 1 10rem; min-width: 0; }
+
+/* Einkaufen für: Tage im Plan wählen */
+.shopbox { margin: 0 0 1rem; }
+.shopbox h2 { margin: 0 0 .2rem; }
+.shoprow { margin: .2rem 0 0; padding-left: 5.7rem; }
+.shoprow label.opt { color: var(--muted); font-size: .92rem; }

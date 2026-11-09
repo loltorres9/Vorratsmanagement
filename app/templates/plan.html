@@ -5,6 +5,16 @@
   <h1>Speiseplan</h1>
   <p class="sub">Diese Woche ist Rotationswoche {{ week }}. Änderungen gelten nur für den jeweiligen Tag.</p>
 </header>
+<section class="shopbox">
+  <h2>Einkaufen für</h2>
+  <p class="sub">{{ shop_summary }}. Hake die Tage an, für die du einkaufen willst, oder wähle schnell:</p>
+  <form method="post" action="{{ url_for('plan_shop_preset') }}" class="row">
+    <button name="n" value="3" class="quiet">Nächste 3 Tage</button>
+    <button name="n" value="7" class="quiet">Nächste 7 Tage</button>
+    <button name="n" value="10" class="quiet">Nächste 10 Tage</button>
+    {% if shop_custom %}<button name="n" value="auto" class="quiet">Automatisch</button>{% endif %}
+  </form>
+</section>
 <ol class="planlist">
   {% for d in days %}
   <li class="{{ d.status }}">
@@ -33,13 +43,20 @@
     </form>
     {% endif %}
     {% if d.status == 'cooked' %}<span class="tag">gekocht</span>{% elif d.status == 'skipped' %}<span class="tag">übersprungen</span>{% endif %}
+    {% if d.status in ('planned', 'covered') %}
+    <form method="post" action="{{ url_for('plan_shop_day', d=d.date) }}" class="shoprow" id="d{{ d.date }}">
+      <label class="opt"><input type="checkbox" name="shop" value="1" {% if d.date in shop_sel %}checked{% endif %}
+        onchange="this.form.submit()"> Einkaufen</label>
+      <noscript><button class="quiet">Speichern</button></noscript>
+    </form>
+    {% endif %}
   </li>
   {% endfor %}
 </ol>
 {% if not days %}<p class="sub">Der Plan ist leer, weil es noch keine Rotation gibt.</p>{% endif %}
 <form method="post" action="{{ url_for('plan_rotation') }}" class="stack">
   {% if has_rotation %}
-  <label class="check"><input type="checkbox" name="replace" value="1"> Bestehende Rotation ersetzen (noch nicht gekochte Tage werden neu belegt)</label>
+  <label class="opt"><input type="checkbox" name="replace" value="1"> Bestehende Rotation ersetzen (noch nicht gekochte Tage werden neu belegt)</label>
   {% endif %}
   <button class="{{ 'quiet' if has_rotation else 'primary' }}">Rotation aus aktiven Rezepten erzeugen</button>
 </form>
