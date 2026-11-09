@@ -9,13 +9,13 @@
 
     <fieldset class="choice">
       <legend>Vorratsschrank</legend>
-      <label class="check"><input type="radio" name="mode" value="new" {% if form.get('mode', 'new') == 'new' %}checked{% endif %}> Neuen, eigenen Vorratsschrank anlegen</label>
-      <label class="check"><input type="radio" name="mode" value="join" {% if form.get('mode') == 'join' %}checked{% endif %}> Einem bestehenden beitreten</label>
+      <label class="opt"><input type="radio" name="mode" value="new" {% if form.get('mode', 'new') == 'new' %}checked{% endif %}> Neuen, eigenen Vorratsschrank anlegen</label>
+      <label class="opt"><input type="radio" name="mode" value="join" {% if form.get('mode') == 'join' %}checked{% endif %}> Einem bestehenden beitreten</label>
     </fieldset>
 
     <label>Beitrittscode (nur zum Beitreten) <input name="join_code" value="{{ form.get('join_code', '') }}" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off"></label>
     <label>Name des neuen Vorratsschranks (optional) <input name="household_name" value="{{ form.get('household_name', '') }}" maxlength="60"></label>
-    <label class="check"><input type="checkbox" name="sample" value="1"> Mit Beispieldaten starten (Rezepte und Zutaten zum Ausprobieren)</label>
+    <label class="opt"><input type="checkbox" name="sample" value="1"> Mit Beispieldaten starten (Rezepte und Zutaten zum Ausprobieren)</label>
 
     {% if claimable %}
     <label>Bisheriges App-Passwort (nur für den bereits bestehenden Vorratsschrank)

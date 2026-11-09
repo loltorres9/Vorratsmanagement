@@ -10,6 +10,7 @@
     {% endif %}
   </div>
   <p class="sub">Antippen bucht den Posten als gekauft in den Vorrat.</p>
+  <p class="sub">{{ shop_summary }}. <a href="{{ url_for('plan_view') }}">Tage im Plan wählen</a></p>
   {% if keep_enabled %}
   <p class="sub">Letzter Keep-Abgleich: {{ last_sync or 'noch keiner' }}</p>
   {% if last_error %}<p class="warn">{{ last_error }}</p>{% endif %}

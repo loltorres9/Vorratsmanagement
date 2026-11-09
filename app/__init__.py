@@ -348,7 +348,9 @@ def create_app(test_config=None):
         ).fetchall()
         _, week = logic.rotation_recipe(conn, logic.today())
         return render_template("plan.html", days=logic.plan(conn, days=21), recipes=recipes, week=week,
-                               has_rotation=logic.rotation_size(conn) > 0, max_days=logic.MAX_COVER_DAYS)
+                               has_rotation=logic.rotation_size(conn) > 0, max_days=logic.MAX_COVER_DAYS,
+                               shop_sel=logic.shop_selection(conn), shop_summary=logic.shop_summary(conn),
+                               shop_custom=logic.shop_mode(conn) == "custom")
 
     @app.post("/plan/rotation")
     @login_required
@@ -362,6 +364,28 @@ def create_app(test_config=None):
             flash(f"Neue Rotation: {n} aktive Gerichte auf {weeks} Wochen verteilt.")
         except ValueError as e:
             flash(str(e))
+        return redirect(url_for("plan_view"))
+
+    @app.post("/plan/<d>/shop")
+    @login_required
+    def plan_shop_day(d):
+        conn = get_conn()
+        logic.toggle_shop_day(conn, d, request.form.get("shop") == "1")
+        logic.refresh_shopping_list(conn)
+        return redirect(url_for("plan_view") + f"#d{d}")
+
+    @app.post("/plan/shop")
+    @login_required
+    def plan_shop_preset():
+        conn = get_conn()
+        n = request.form.get("n", "auto")
+        if n == "auto":
+            logic.shop_auto(conn)
+        else:
+            logic.shop_next_days(conn, max(1, min(int(n), 21)))
+        for h in logic.refresh_shopping_list(conn):
+            flash(h)
+        flash("Einkaufsliste neu berechnet: " + logic.shop_summary(conn) + ".")
         return redirect(url_for("plan_view"))
 
     @app.post("/plan/<d>/cook")
@@ -411,7 +435,7 @@ def create_app(test_config=None):
             "einkauf.html", groups=groups, count=len(items),
             last_sync=db.get_setting(conn, "keep_last_sync"),
             last_error=db.get_setting(conn, "keep_last_error"),
-            cost=logic.week_cost(conn),
+            cost=logic.week_cost(conn), shop_summary=logic.shop_summary(conn),
         )
 
     @app.post("/einkauf/refresh")

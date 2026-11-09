@@ -50,7 +50,7 @@ tests/test_app.py   unittest (läuft auch mit pytest)
   min_stock, pack_size, price, **stock**, made_by_recipe_id (selbstgemacht, z. B. Gulasch-Portion)
 - `recipes` (kind `meal` | `batch`, `active` 0/1 – inaktive Gerichte sind nicht in der Rotation), `recipe_ingredients` (Menge **wie im Rezept** = eine Portion, `recipes.servings` ist immer 1; Batch: pro Batch; im Plan multipliziert `meal_plan.portions`). Rezepte aus Fotos: nur Angaben aus dem Rezept, nichts dazu interpretieren – fehlende Mengen bleiben leer, der Nutzer ergänzt sie
 - `rotation(week, weekday, recipe_id)` – 5-Wochen-Rotation, Woche 1 beginnt bei `rotation_start`
-- `meal_plan(date, recipe_id, portions, status planned|cooked|skipped|covered, anchor_date)` – `covered` = Reste:
+- `meal_plan(date, recipe_id, portions, status planned|cooked|skipped|covered, anchor_date, shop)` – `covered` = Reste:
   Ein Gericht kann „X Tage reichen“ (`logic.set_coverage`): Der Kochtag bekommt `portions = X`, die Folgetage werden
   `covered` (mit `anchor_date` = Kochtag), zählen nicht zum Bedarf und werden von `ensure_plan` nicht überschrieben.
   Überschreibt man einen Reste-Tag, reicht das Gericht nur bis zum Vortag; „Heute nicht“ am Kochtag gibt die Reste frei.
@@ -61,6 +61,10 @@ tests/test_app.py   unittest (läuft auch mit pytest)
 ## Kernregeln (nicht versehentlich ändern)
 1. **Bedarf** = Zutaten aller *geplanten* Gerichte der nächsten `PLAN_DAYS` Tage
    + Mindestbestand − Bestand; aufgerundet auf ganze Packungen (`pack_size`).
+1b. **Einkaufen für**: Standard ist `auto` (Regeln 1 und 1a). Wählt man im Plan Tage (Haken „Einkaufen“ oder
+   „Nächste N Tage“), gilt Modus `custom` (`settings.shop_mode`, `meal_plan.shop`): Bedarf = Zutaten genau dieser Tage
+   (Reste-Tage zählen über ihr Kochgericht) + Mindestbestand − Bestand, ohne Reserve und ohne PLAN_DAYS-Grenze.
+   Neue Plan-Tage sind im Modus `custom` nicht angehakt; „Automatisch“ stellt zurück (`logic.shop_auto`).
 1a. **Reserve**: haltbare Produkte (Vorrat, TK) werden für `RESERVE_DAYS` (Standard 10) Plan-Tage
    vorgehalten, Frischware (Kühlschrank) nur für `PLAN_DAYS`. Das Tiefkühlfach ist klein
    (`TK_CAPACITY_G`, Standard 4000 g; Portion ≈ 400 g): passt die TK-Reserve nicht rein, wird nur ihr Zeitraum gekürzt. Rollierend: nach dem Kochen wird nachgekauft.

@@ -336,6 +336,85 @@ def requirements(conn, start: date, days: int):
     return req
 
 
+def requirements_dates(conn, dates):
+    """Wie `requirements`, aber für genau diese Tage (ISO-Strings)."""
+    req = defaultdict(float)
+    dates = list(dates)
+    if not dates:
+        return req
+    marks = ",".join("?" * len(dates))
+    rows = conn.execute(
+        "SELECT m.portions, ri.product_id, ri.qty / r.servings AS qty FROM meal_plan m "
+        "JOIN recipe_ingredients ri ON ri.recipe_id = m.recipe_id "
+        "JOIN recipes r ON r.id = m.recipe_id "
+        f"WHERE m.status = 'planned' AND m.date IN ({marks})", dates,
+    ).fetchall()
+    for r in rows:
+        req[r["product_id"]] += r["qty"] * r["portions"]
+    return req
+
+
+# ---- Für welche Tage wird eingekauft? ------------------------------------------------
+# „auto“: nächste PLAN_DAYS Tage (haltbare Sachen RESERVE_DAYS), wie bisher.
+# „custom“: nur die im Plan angekreuzten Tage (meal_plan.shop = 1), ohne Reserve.
+
+def shop_mode(conn) -> str:
+    return "custom" if db.get_setting(conn, "shop_mode", "auto") == "custom" else "auto"
+
+
+def selected_dates(conn):
+    """None im Modus auto; sonst die Kochtage, die eingekauft werden. Reste zählen über ihr Kochgericht."""
+    if shop_mode(conn) != "custom":
+        return None
+    out = set()
+    for r in conn.execute("SELECT date, status, anchor_date FROM meal_plan WHERE shop = 1 AND date >= ?",
+                          (today().isoformat(),)):
+        out.add(r["anchor_date"] if r["status"] == "covered" and r["anchor_date"] else r["date"])
+    return out
+
+
+def shop_selection(conn) -> set:
+    """Tage (ISO), die gerade für die Einkaufsliste angekreuzt sind (auto: die nächsten PLAN_DAYS Tage)."""
+    if shop_mode(conn) == "custom":
+        return {r["date"] for r in conn.execute("SELECT date FROM meal_plan WHERE shop = 1 AND date >= ?",
+                                                (today().isoformat(),))}
+    n = int(os.environ.get("PLAN_DAYS", 7))
+    return {(today() + timedelta(days=i)).isoformat() for i in range(n)}
+
+
+def set_shop_days(conn, dates):
+    """Schaltet auf „Auswahl“ und markiert genau diese Tage (ab heute)."""
+    conn.execute("UPDATE meal_plan SET shop = 0 WHERE date >= ?", (today().isoformat(),))
+    conn.executemany("UPDATE meal_plan SET shop = 1 WHERE date = ? AND date >= ?",
+                     [(d, today().isoformat()) for d in dates])
+    db.set_setting(conn, "shop_mode", "custom")
+    conn.commit()
+
+
+def toggle_shop_day(conn, d: str, on: bool):
+    sel = shop_selection(conn)
+    set_shop_days(conn, (sel | {d}) if on else (sel - {d}))
+
+
+def shop_next_days(conn, n: int):
+    set_shop_days(conn, {(today() + timedelta(days=i)).isoformat() for i in range(n)})
+
+
+def shop_auto(conn):
+    db.set_setting(conn, "shop_mode", "auto")
+    conn.execute("UPDATE meal_plan SET shop = 0")
+    conn.commit()
+
+
+def shop_summary(conn) -> str:
+    if shop_mode(conn) == "custom":
+        n = conn.execute("SELECT COUNT(*) FROM meal_plan WHERE shop = 1 AND date >= ?",
+                         (today().isoformat(),)).fetchone()[0]
+        return f"Nach Auswahl im Plan: {n} {'Tag' if n == 1 else 'Tage'}"
+    return (f"Automatisch: die nächsten {int(os.environ.get('PLAN_DAYS', 7))} Tage, "
+            f"haltbare Sachen für {int(os.environ.get('RESERVE_DAYS', 10))}")
+
+
 def _weight_g(unit, qty):
     """Grobes Gewicht für die Tiefkühlfach-Rechnung."""
     return qty * UNIT_G.get(unit, 1)
@@ -354,6 +433,9 @@ def compute_needs(conn, start: date | None = None, days: int | None = None,
     Batch-Rezepts aufgelöst, statt selbst auf der Liste zu landen.
     """
     start = start or today()
+    chosen = selected_dates(conn)
+    if chosen is not None:  # Auswahl im Plan: genau diese Tage, keine Reserve
+        return _needs(conn, start, 0, 0, 0, dates=chosen)
     days = days or int(os.environ.get("PLAN_DAYS", 7))
     reserve_days = int(os.environ.get("RESERVE_DAYS", 10)) if reserve_days is None else reserve_days
     cap = float(os.environ.get("TK_CAPACITY_G", 4000)) if tk_capacity_g is None else tk_capacity_g
@@ -380,11 +462,11 @@ def _tk_weight(conn, needs):
     return total
 
 
-def _needs(conn, start, days, reserve_days, tk_days):
+def _needs(conn, start, days, reserve_days, tk_days, dates=None):
     products = {p["id"]: p for p in conn.execute("SELECT * FROM products WHERE active = 1")}
-    req = requirements(conn, start, days)
+    req = requirements(conn, start, days) if dates is None else requirements_dates(conn, dates)
     for horizon, locations in ((reserve_days, ("Vorrat",)), (tk_days, ("TK",))):
-        if horizon > days:
+        if dates is None and horizon > days:
             for pid, qty in requirements(conn, start, horizon).items():
                 if products.get(pid) and products[pid]["location"] in locations:
                     req[pid] = qty
