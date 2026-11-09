@@ -348,7 +348,7 @@ def create_app(test_config=None):
         ).fetchall()
         _, week = logic.rotation_recipe(conn, logic.today())
         return render_template("plan.html", days=logic.plan(conn, days=21), recipes=recipes, week=week,
-                               has_rotation=logic.rotation_size(conn) > 0)
+                               has_rotation=logic.rotation_size(conn) > 0, max_days=logic.MAX_COVER_DAYS)
 
     @app.post("/plan/rotation")
     @login_required
@@ -374,14 +374,27 @@ def create_app(test_config=None):
     @app.post("/plan/<d>/skip")
     @login_required
     def plan_skip(d):
-        logic.mark_skipped(get_conn(), d)
+        conn = get_conn()
+        logic.mark_skipped(conn, d)
+        logic.refresh_shopping_list(conn)
         return redirect(request.referrer or url_for("index"))
 
     @app.post("/plan/<d>/set")
     @login_required
     def plan_set(d):
-        logic.set_plan(get_conn(), d, int(request.form["recipe_id"]),
-                       float(request.form.get("portions") or 1))
+        conn = get_conn()
+        days = int(request.form.get("days") or 1)
+        try:
+            if days > 1:
+                logic.set_plan(conn, d, int(request.form["recipe_id"]), days)
+                logic.set_coverage(conn, d, days)
+            else:
+                logic.set_plan(conn, d, int(request.form["recipe_id"]),
+                               float(request.form.get("portions") or 1))
+            logic.ensure_plan(conn, days=21)
+            logic.refresh_shopping_list(conn)
+        except ValueError as e:
+            flash(str(e))
         return redirect(url_for("plan_view"))
 
     # ------------------------------------------------------------------- Einkauf

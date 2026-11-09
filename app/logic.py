@@ -131,7 +131,7 @@ def build_rotation(conn, rng=None) -> tuple:
                      [(i // 7 + 1, i % 7, rid) for i, rid in enumerate(order)])
     db.set_setting(conn, "rotation_weeks", weeks)
     db.set_setting(conn, "rotation_start", monday_of(today()).isoformat())
-    conn.execute("DELETE FROM meal_plan WHERE status = 'planned' AND date >= ?", (today().isoformat(),))
+    conn.execute("DELETE FROM meal_plan WHERE status IN ('planned', 'covered') AND date >= ?", (today().isoformat(),))
     conn.commit()
     ensure_plan(conn, days=21)
     return weeks, len(ids)
@@ -157,20 +157,72 @@ def ensure_plan(conn, start: date | None = None, days: int = 14):
 def plan(conn, start: date | None = None, days: int = 14):
     start = start or today()
     end = start + timedelta(days=days)
+    # span = Zahl der Tage, die das Gericht reicht; day_no = der wievielte Tag davon (1 = es wird gekocht)
     return conn.execute(
-        "SELECT m.*, r.name AS recipe_name FROM meal_plan m JOIN recipes r ON r.id = m.recipe_id "
+        "SELECT m.*, r.name AS recipe_name, "
+        "(SELECT COUNT(*) FROM meal_plan c WHERE c.anchor_date = COALESCE(m.anchor_date, m.date)) + 1 AS span, "
+        "CAST(julianday(m.date) - julianday(COALESCE(m.anchor_date, m.date)) AS INTEGER) + 1 AS day_no "
+        "FROM meal_plan m JOIN recipes r ON r.id = m.recipe_id "
         "WHERE m.date >= ? AND m.date < ? ORDER BY m.date",
         (start.isoformat(), end.isoformat()),
     ).fetchall()
 
 
+MAX_COVER_DAYS = 7
+
+
+def _release_coverage(conn, anchor: str):
+    """Gibt die Reste-Tage eines Gerichts frei (ensure_plan belegt sie wieder aus der Rotation)."""
+    conn.execute("DELETE FROM meal_plan WHERE anchor_date = ? AND status = 'covered'", (anchor,))
+
+
+def _shrink_anchor(conn, d: str):
+    """Wird ein Reste-Tag anders belegt, reicht das Gericht nur bis zum Vortag; spätere Reste-Tage werden frei."""
+    row = conn.execute("SELECT anchor_date FROM meal_plan WHERE date = ? AND status = 'covered'", (d,)).fetchone()
+    if not row:
+        return
+    anchor = row["anchor_date"]
+    kept = (date.fromisoformat(d) - date.fromisoformat(anchor)).days
+    conn.execute("DELETE FROM meal_plan WHERE anchor_date = ? AND date >= ?", (anchor, d))
+    conn.execute("UPDATE meal_plan SET portions = ? WHERE date = ? AND status = 'planned'", (kept, anchor))
+
+
 def set_plan(conn, d: str, recipe_id: int, portions: float = 1):
+    _shrink_anchor(conn, d)
+    _release_coverage(conn, d)
     conn.execute(
-        "INSERT INTO meal_plan(date, recipe_id, portions, status) VALUES(?,?,?, 'planned') "
+        "INSERT INTO meal_plan(date, recipe_id, portions, status, anchor_date) VALUES(?,?,?, 'planned', NULL) "
         "ON CONFLICT(date) DO UPDATE SET recipe_id = excluded.recipe_id, "
-        "portions = excluded.portions, status = 'planned'",
+        "portions = excluded.portions, status = 'planned', anchor_date = NULL",
         (d, recipe_id, portions),
     )
+    conn.commit()
+
+
+def set_coverage(conn, d: str, days: int):
+    """Das Gericht am Tag `d` reicht für `days` Tage: Es wird einmal für `days` Portionen gekocht, die
+    Folgetage bleiben als „Reste“ ohne eigenes Gericht und zählen nicht zum Bedarf. days = 1 hebt das auf.
+
+    Wirft ValueError, wenn der Tag nicht (mehr) geplant ist oder ein Folgetag schon gekocht wurde."""
+    if not 1 <= days <= MAX_COVER_DAYS:
+        raise ValueError(f"Ein Gericht kann für 1 bis {MAX_COVER_DAYS} Tage reichen.")
+    m = conn.execute("SELECT * FROM meal_plan WHERE date = ?", (d,)).fetchone()
+    if not m or m["status"] != "planned":
+        raise ValueError("Nur ein noch geplantes Gericht kann für mehrere Tage reichen.")
+    start = date.fromisoformat(d)
+    following = [(start + timedelta(days=i)).isoformat() for i in range(1, days)]
+    for f in following:
+        row = conn.execute("SELECT status FROM meal_plan WHERE date = ?", (f,)).fetchone()
+        if row and row["status"] == "cooked":
+            raise ValueError(f"Am {date.fromisoformat(f).strftime('%d.%m.')} ist schon gekocht.")
+    _release_coverage(conn, d)
+    for f in following:
+        _shrink_anchor(conn, f)       # ein Gericht, das in diesen Tag hineinreichte, endet am Vortag
+        _release_coverage(conn, f)    # liegt hier selbst ein Gericht mit Resten, werden die frei
+        conn.execute(
+            "INSERT OR REPLACE INTO meal_plan(date, recipe_id, portions, status, anchor_date) "
+            "VALUES(?,?,0,'covered',?)", (f, m["recipe_id"], d))
+    conn.execute("UPDATE meal_plan SET portions = ? WHERE date = ?", (days, d))
     conn.commit()
 
 
@@ -188,7 +240,7 @@ def set_recipe_active(conn, recipe_id, active: bool):
     conn.execute("UPDATE recipes SET active = ? WHERE id = ?", (1 if active else 0, recipe_id))
     if not active:
         conn.execute(
-            "DELETE FROM meal_plan WHERE recipe_id = ? AND status = 'planned' AND date >= ?",
+            "DELETE FROM meal_plan WHERE recipe_id = ? AND status IN ('planned', 'covered') AND date >= ?",
             (recipe_id, today().isoformat()),
         )
     conn.commit()
@@ -251,7 +303,7 @@ def cook_recipe(conn, recipe_id, portions=1.0, reason=None):
 
 def mark_cooked(conn, d: str):
     m = conn.execute("SELECT * FROM meal_plan WHERE date = ?", (d,)).fetchone()
-    if not m or m["status"] == "cooked":
+    if not m or m["status"] in ("cooked", "covered"):
         return
     cook_recipe(conn, m["recipe_id"], m["portions"])
     conn.execute("UPDATE meal_plan SET status = 'cooked' WHERE date = ?", (d,))
@@ -259,7 +311,10 @@ def mark_cooked(conn, d: str):
 
 
 def mark_skipped(conn, d: str):
-    conn.execute("UPDATE meal_plan SET status = 'skipped' WHERE date = ? AND status = 'planned'", (d,))
+    row = conn.execute("SELECT status FROM meal_plan WHERE date = ?", (d,)).fetchone()
+    if row and row["status"] == "planned":
+        _release_coverage(conn, d)
+        conn.execute("UPDATE meal_plan SET status = 'skipped', portions = 1 WHERE date = ?", (d,))
     conn.commit()
 
 

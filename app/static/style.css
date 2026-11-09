@@ -163,3 +163,15 @@ input, select {
 .code { font-family: ui-monospace, monospace; font-size: 1.6rem; letter-spacing: .15em; margin: .4rem 0; }
 textarea[readonly] { width: 100%; font: inherit; font-size: .85rem; }
 .login.register { margin-top: 4vh; max-width: 460px; }
+
+/* Reste: ein Gericht reicht mehrere Tage */
+.days li.covered, .planlist li.covered { opacity: .75; }
+.rest { color: var(--muted); }
+.days-select { width: 6.5rem; flex: none; }
+.planrow .portions[readonly] { opacity: .6; }
+.planrow { flex-wrap: wrap; }
+.planrow select[name="recipe_id"] { flex: 1 1 10rem; }
+.planrow .portions { width: 4.2rem; flex: none; }
+.planrow select.days-select { flex: none; width: 6.2rem; margin-left: 0; }
+.planrow select[name="recipe_id"] { flex: 1 1 9rem; }
+.planrow .rest { flex: 1 1 10rem; min-width: 0; }

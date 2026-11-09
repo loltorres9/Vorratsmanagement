@@ -8,6 +8,12 @@
 <ol class="planlist">
   {% for d in days %}
   <li class="{{ d.status }}">
+    {% if d.status == 'covered' %}
+    <div class="planrow">
+      <span class="day">{{ day_label(d.date) }}</span>
+      <span class="rest">Reste: {{ d.recipe_name }} (Tag {{ d.day_no }} von {{ d.span }})</span>
+    </div>
+    {% else %}
     <form method="post" action="{{ url_for('plan_set', d=d.date) }}" class="planrow">
       <span class="day">{{ day_label(d.date) }}</span>
       <select name="recipe_id" aria-label="Gericht am {{ day_label(d.date) }}" onchange="this.form.submit()">
@@ -16,9 +22,16 @@
         {% endfor %}
       </select>
       <input name="portions" type="number" min="0.5" step="0.5" value="{{ d.portions|round(1) }}"
-             aria-label="Portionen" class="portions" onchange="this.form.submit()">
+             aria-label="Portionen" class="portions" onchange="this.form.submit()" {% if d.span > 1 %}readonly{% endif %}>
+      <select name="days" class="days-select" aria-label="Reicht für wie viele Tage am {{ day_label(d.date) }}"
+              onchange="this.form.submit()" {% if d.status != 'planned' %}disabled{% endif %}>
+        {% for n in range(1, max_days + 1) %}
+        <option value="{{ n }}" {% if n == d.span %}selected{% endif %}>{{ n }} {{ 'Tag' if n == 1 else 'Tage' }}</option>
+        {% endfor %}
+      </select>
       <noscript><button>Speichern</button></noscript>
     </form>
+    {% endif %}
     {% if d.status == 'cooked' %}<span class="tag">gekocht</span>{% elif d.status == 'skipped' %}<span class="tag">übersprungen</span>{% endif %}
   </li>
   {% endfor %}
@@ -30,5 +43,5 @@
   {% endif %}
   <button class="{{ 'quiet' if has_rotation else 'primary' }}">Rotation aus aktiven Rezepten erzeugen</button>
 </form>
-<p class="sub">Tipp: 2 Portionen eintragen, wenn du für den nächsten Tag mitkochst oder einfrierst.</p>
+<p class="sub">„Tage“ legt fest, wie lange ein Gericht reicht: Es wird einmal für so viele Portionen gekocht, die Folgetage bleiben als Reste leer und die Einkaufsliste rechnet neu. Mit mehr Portionen allein (z. B. zum Einfrieren) bleiben die Folgetage belegt.</p>
 {% endblock %}

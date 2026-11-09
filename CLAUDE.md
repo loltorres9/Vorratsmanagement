@@ -50,7 +50,10 @@ tests/test_app.py   unittest (läuft auch mit pytest)
   min_stock, pack_size, price, **stock**, made_by_recipe_id (selbstgemacht, z. B. Gulasch-Portion)
 - `recipes` (kind `meal` | `batch`, `active` 0/1 – inaktive Gerichte sind nicht in der Rotation), `recipe_ingredients` (Menge **wie im Rezept** = eine Portion, `recipes.servings` ist immer 1; Batch: pro Batch; im Plan multipliziert `meal_plan.portions`). Rezepte aus Fotos: nur Angaben aus dem Rezept, nichts dazu interpretieren – fehlende Mengen bleiben leer, der Nutzer ergänzt sie
 - `rotation(week, weekday, recipe_id)` – 5-Wochen-Rotation, Woche 1 beginnt bei `rotation_start`
-- `meal_plan(date, recipe_id, portions, status planned|cooked|skipped)`
+- `meal_plan(date, recipe_id, portions, status planned|cooked|skipped|covered, anchor_date)` – `covered` = Reste:
+  Ein Gericht kann „X Tage reichen“ (`logic.set_coverage`): Der Kochtag bekommt `portions = X`, die Folgetage werden
+  `covered` (mit `anchor_date` = Kochtag), zählen nicht zum Bedarf und werden von `ensure_plan` nicht überschrieben.
+  Überschreibt man einen Reste-Tag, reicht das Gericht nur bis zum Vortag; „Heute nicht“ am Kochtag gibt die Reste frei.
 - `shopping_items(source auto|manual|keep, status open|bought|dismissed, keep_item_id, packs)`
 - `stock_log` – jede Bestandsänderung mit Grund
 - `settings` – rotation_start, rotation_weeks, keep_list_id, keep_last_sync, keep_last_error

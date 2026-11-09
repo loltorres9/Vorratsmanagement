@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS meal_plan (
     date      TEXT PRIMARY KEY,   -- ISO-Datum
     recipe_id INTEGER NOT NULL REFERENCES recipes(id),
     portions  REAL NOT NULL DEFAULT 1,
-    status    TEXT NOT NULL DEFAULT 'planned'   -- planned | cooked | skipped
+    status    TEXT NOT NULL DEFAULT 'planned',  -- planned | cooked | skipped | covered (Reste eines Gerichts)
+    anchor_date TEXT                            -- bei covered: der Tag, an dem gekocht wird
 );
 CREATE TABLE IF NOT EXISTS shopping_items (
     id           INTEGER PRIMARY KEY,
@@ -134,6 +135,9 @@ def migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE recipes ADD COLUMN user_edited INTEGER NOT NULL DEFAULT 0")
     if "servings" not in cols:
         conn.execute("ALTER TABLE recipes ADD COLUMN servings REAL NOT NULL DEFAULT 1")
+    plan_cols = {r["name"] for r in conn.execute("PRAGMA table_info(meal_plan)")}
+    if plan_cols and "anchor_date" not in plan_cols:
+        conn.execute("ALTER TABLE meal_plan ADD COLUMN anchor_date TEXT")
 
 
 def get_setting(conn, key, default=None):

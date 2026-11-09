@@ -7,7 +7,9 @@
 {% if today %}
 <section class="plate {{ today.status }}">
   <h1>{{ today.recipe_name }}</h1>
-  {% if today.status == 'planned' %}
+  {% if today.status == 'covered' %}
+    <p class="done">Reste von heute Tag {{ today.day_no }} von {{ today.span }}: kein Kochen nötig.</p>
+  {% elif today.status == 'planned' %}
     {% if missing %}
       <p class="warn">Fehlt laut Vorrat: {{ missing|map(attribute='name')|join(', ') }}</p>
     {% endif %}
@@ -24,6 +26,7 @@
   {% else %}
     <p class="done">Übersprungen.</p>
   {% endif %}
+  {% if today.status != 'covered' %}
   <details>
     <summary>Zutaten für {{ fmt_qty(today.portions, 'Portion') }}</summary>
     <ul class="ings">
@@ -32,6 +35,7 @@
       {% endfor %}
     </ul>
   </details>
+  {% endif %}
 </section>
 {% else %}
 <section class="empty">
@@ -47,7 +51,7 @@
 <h2>Die nächsten Tage</h2>
 <ol class="days">
   {% for d in upcoming %}
-  <li class="{{ d.status }}"><span class="day">{{ day_label(d.date) }}</span><span>{{ d.recipe_name }}</span></li>
+  <li class="{{ d.status }}"><span class="day">{{ day_label(d.date) }}</span><span>{% if d.status == 'covered' %}Reste: {% endif %}{{ d.recipe_name }}</span></li>
   {% endfor %}
 </ol>
 {% endblock %}
