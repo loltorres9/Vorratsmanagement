@@ -849,5 +849,155 @@ class BuildRotationTest(unittest.TestCase):
         self.assertEqual(logic.rotation_size(conn), 7)
 
 
+class CoverageTest(unittest.TestCase):
+    """Ein Gericht reicht für mehrere Tage."""
+    def setUp(self):
+        self.conn = fresh_conn()
+        self.old_today = logic.today
+        logic.today = lambda: MONDAY
+        logic.ensure_plan(self.conn, MONDAY, 14)
+        self.d = [(MONDAY + timedelta(days=i)).isoformat() for i in range(7)]
+
+    def tearDown(self):
+        logic.today = self.old_today
+
+    def status(self, d):
+        return self.conn.execute("SELECT status, portions, anchor_date, recipe_id FROM meal_plan WHERE date=?", (d,)).fetchone()
+
+    def test_following_days_become_leftovers_and_stay_after_refill(self):
+        rid = self.status(self.d[0])["recipe_id"]
+        logic.set_coverage(self.conn, self.d[0], 3)
+        a, b, c, nxt = (self.status(x) for x in self.d[:4])
+        self.assertEqual((a["status"], a["portions"]), ("planned", 3))
+        self.assertEqual((b["status"], b["anchor_date"], b["recipe_id"]), ("covered", self.d[0], rid))
+        self.assertEqual(c["status"], "covered")
+        self.assertEqual(nxt["status"], "planned")  # der vierte Tag bleibt wie er war
+        logic.ensure_plan(self.conn, MONDAY, 14)  # darf die Reste nicht überschreiben
+        self.assertEqual(self.status(self.d[1])["status"], "covered")
+        plan = {r["date"]: (r["day_no"], r["span"]) for r in logic.plan(self.conn, MONDAY, 7)}
+        self.assertEqual((plan[self.d[0]], plan[self.d[1]], plan[self.d[2]]), ((1, 3), (2, 3), (3, 3)))
+
+    def test_needs_count_the_recipe_once_for_all_days(self):
+        rid = self.status(self.d[0])["recipe_id"]
+        replaced = [self.status(self.d[1])["recipe_id"], self.status(self.d[2])["recipe_id"]]
+        before = logic.requirements(self.conn, MONDAY, 7)
+        logic.set_coverage(self.conn, self.d[0], 3)
+        after = logic.requirements(self.conn, MONDAY, 7)
+        expected = dict(before)
+        for i in logic.ingredients(self.conn, rid):
+            expected[i["id"]] = expected.get(i["id"], 0) + 2 * i["per_portion"]  # Tag 1 zählt 3 statt 1 Portion
+        for r in replaced:  # die zwei ersetzten Tage fallen weg
+            for i in logic.ingredients(self.conn, r):
+                expected[i["id"]] = expected.get(i["id"], 0) - i["per_portion"]
+        for pid_ in set(expected) | set(after):
+            self.assertAlmostEqual(after.get(pid_, 0), expected.get(pid_, 0), places=6)
+
+    def test_cook_books_all_portions_and_leftover_cannot_be_cooked(self):
+        rid = self.status(self.d[0])["recipe_id"]
+        ing = logic.ingredients(self.conn, rid)[0]
+        logic.change_stock(self.conn, ing["id"], 10000, "Test")
+        start = stock(self.conn, ing["name"])
+        logic.set_coverage(self.conn, self.d[0], 3)
+        logic.mark_cooked(self.conn, self.d[1])  # Reste: nichts passiert
+        self.assertEqual(stock(self.conn, ing["name"]), start)
+        logic.mark_cooked(self.conn, self.d[0])
+        self.assertAlmostEqual(start - stock(self.conn, ing["name"]), ing["per_portion"] * 3)
+        self.assertEqual(self.status(self.d[1])["status"], "covered")
+
+    def test_skip_releases_leftovers_and_rotation_refills(self):
+        logic.set_coverage(self.conn, self.d[0], 3)
+        logic.mark_skipped(self.conn, self.d[0])
+        self.assertEqual(self.status(self.d[0])["status"], "skipped")
+        self.assertIsNone(self.status(self.d[1]))
+        logic.ensure_plan(self.conn, MONDAY, 14)
+        self.assertEqual(self.status(self.d[1])["status"], "planned")
+
+    def test_reduce_and_clear(self):
+        logic.set_coverage(self.conn, self.d[0], 4)
+        logic.set_coverage(self.conn, self.d[0], 2)
+        self.assertEqual(self.status(self.d[1])["status"], "covered")
+        self.assertIsNone(self.status(self.d[2]))
+        logic.set_coverage(self.conn, self.d[0], 1)
+        self.assertIsNone(self.status(self.d[1]))
+        self.assertEqual(self.status(self.d[0])["portions"], 1)
+
+    def test_changing_a_leftover_day_shortens_the_anchor(self):
+        logic.set_coverage(self.conn, self.d[0], 4)
+        other = self.conn.execute("SELECT id FROM recipes WHERE name='Apfelküchle'").fetchone()["id"]
+        logic.set_plan(self.conn, self.d[2], other)
+        self.assertEqual(self.status(self.d[0])["portions"], 2)
+        self.assertEqual(self.status(self.d[1])["status"], "covered")
+        self.assertEqual((self.status(self.d[2])["status"], self.status(self.d[2])["recipe_id"]), ("planned", other))
+        self.assertIsNone(self.status(self.d[3]))  # frei, wird aus der Rotation neu belegt
+
+    def test_replacing_the_anchor_recipe_clears_the_leftovers(self):
+        logic.set_coverage(self.conn, self.d[0], 3)
+        other = self.conn.execute("SELECT id FROM recipes WHERE name='Apfelküchle'").fetchone()["id"]
+        logic.set_plan(self.conn, self.d[0], other)
+        self.assertIsNone(self.status(self.d[1]))
+        self.assertEqual(self.status(self.d[0])["portions"], 1)
+
+    def test_overlapping_coverage_and_validation(self):
+        logic.set_coverage(self.conn, self.d[2], 3)  # Tag 3 bis 5
+        logic.set_coverage(self.conn, self.d[0], 4)  # Tag 1 bis 4 überdeckt den Anfang davon
+        self.assertEqual(self.status(self.d[2])["status"], "covered")
+        self.assertEqual(self.status(self.d[2])["anchor_date"], self.d[0])
+        self.assertIsNone(self.status(self.d[4]))  # Rest des alten Gerichts ist frei
+        with self.assertRaises(ValueError):
+            logic.set_coverage(self.conn, self.d[0], 0)
+        with self.assertRaises(ValueError):
+            logic.set_coverage(self.conn, self.d[0], 8)
+        with self.assertRaises(ValueError):
+            logic.set_coverage(self.conn, self.d[1], 2)  # ein Reste-Tag ist selbst keine Planung
+        logic.mark_cooked(self.conn, self.d[5])
+        with self.assertRaises(ValueError):
+            logic.set_coverage(self.conn, self.d[4], 3)  # Folgetag schon gekocht
+
+    def test_deactivating_recipe_removes_its_leftovers(self):
+        rid = self.status(self.d[0])["recipe_id"]
+        logic.set_coverage(self.conn, self.d[0], 3)
+        logic.set_recipe_active(self.conn, rid, False)
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM meal_plan WHERE status='covered'").fetchone()[0], 0)
+
+    def test_migration_adds_anchor_column(self):
+        conn = db.connect(os.path.join(tempfile.mkdtemp(), "old.db"))
+        conn.execute("CREATE TABLE recipes (id INTEGER PRIMARY KEY, name TEXT, kind TEXT, "
+                     "yields_product_id INTEGER, yields_qty REAL, notes TEXT)")
+        conn.execute("CREATE TABLE meal_plan (date TEXT PRIMARY KEY, recipe_id INTEGER NOT NULL, "
+                     "portions REAL NOT NULL DEFAULT 1, status TEXT NOT NULL DEFAULT 'planned')")
+        db.migrate(conn)
+        self.assertIn("anchor_date", {r["name"] for r in conn.execute("PRAGMA table_info(meal_plan)")})
+
+
+class CoverageWebTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.app = create_app({"TESTING": True, "DATABASE_PATH": os.path.join(tmp, "w.db"), "START_SYNC": False,
+                               "APP_PASSWORD": "geheim", "SESSION_COOKIE_SECURE": False})
+        self.c = self.app.test_client()
+        self.c.post("/registrieren", data={"name": "ich", "password": "langespasswort", "claim_password": "geheim"})
+        self.conn = db.connect(self.app.config["DATABASE_PATH"])
+        logic.ensure_plan(self.conn, days=14)
+        self.t = logic.today()
+
+    def test_select_days_updates_plan_shopping_list_and_pages(self):
+        d0 = self.t.isoformat()
+        d1 = (self.t + timedelta(days=1)).isoformat()
+        self.c.post("/einkauf/refresh")
+        before = {r["name"]: r["qty"] for r in logic.shopping_list(self.conn)}
+        rid = self.conn.execute("SELECT recipe_id FROM meal_plan WHERE date=?", (d0,)).fetchone()[0]
+        r = self.c.post(f"/plan/{d0}/set", data={"recipe_id": rid, "portions": "1", "days": "3"})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.conn.execute("SELECT status FROM meal_plan WHERE date=?", (d1,)).fetchone()[0], "covered")
+        page = self.c.get("/plan").get_data(as_text=True)
+        self.assertIn("Reste:", page)
+        self.assertIn("Tag 2 von 3", page)
+        self.assertEqual(self.c.get("/").status_code, 200)
+        after = {r["name"]: r["qty"] for r in logic.shopping_list(self.conn)}
+        self.assertNotEqual(before, after)  # Einkaufsliste wurde neu gerechnet
+        self.c.post(f"/plan/{d0}/set", data={"recipe_id": rid, "portions": "1", "days": "1"})
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM meal_plan WHERE status='covered'").fetchone()[0], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
